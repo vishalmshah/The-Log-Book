@@ -1,0 +1,138 @@
+/* ============================================================
+   DESIGN TOKENS
+   Edit the PALETTE section to retheme the entire app.
+   The shadcn variables below pick these up automatically.
+   ============================================================ */
+
+:root {
+  /* ===== PALETTE =====
+     Change these values to retheme. Everything else is derived. */
+
+  --bg-page:    #FFE8F0;   /* patterned page background */
+  --bg-content: #FFFBF5;   /* content card background */
+  --bg-card:    #FFFFFF;   /* cards within content */
+
+  --fg-primary: #4A2540;   /* main text */
+  --fg-muted:   #8A6479;   /* secondary / label text */
+
+  --brand:       #D9758D;  /* primary accent — buttons, active states */
+  --brand-hover: #C25A75;
+  --brand-soft:  #FCE4EC;  /* light tint for hover backgrounds */
+
+  --border-color: #E8C8D4;
+  --success:      #6FAE7E;
+  --warning:      #E8A85C;
+
+  /* ===== TYPOGRAPHY =====
+     --font-vt323 and --font-karla are injected by next/font in layout.tsx */
+
+  --font-display-stack: var(--font-vt323), 'Courier New', monospace;
+  --font-body-stack:    var(--font-karla), system-ui, sans-serif;
+
+  /* ===== SHAPE ===== */
+  --radius:    0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+
+  /* ===== SHADCN VARIABLE OVERRIDES =====
+     These map the shadcn component system onto our palette.
+     Don't edit unless remapping component behavior. */
+
+  --background:          var(--bg-content);
+  --foreground:          var(--fg-primary);
+  --card:                var(--bg-card);
+  --card-foreground:     var(--fg-primary);
+  --popover:             var(--bg-card);
+  --popover-foreground:  var(--fg-primary);
+  --primary:             var(--brand);
+  --primary-foreground:  #FFFFFF;
+  --secondary:           var(--brand-soft);
+  --secondary-foreground: var(--fg-primary);
+  --muted:               var(--brand-soft);
+  --muted-foreground:    var(--fg-muted);
+  --accent:              var(--brand-soft);
+  --accent-foreground:   var(--fg-primary);
+  --destructive:         #D94B5A;
+  --destructive-foreground: #FFFFFF;
+  --border:              var(--border-color);
+  --input:               var(--border-color);
+  --ring:                var(--brand);
+  --chart-1:             var(--brand);
+  --chart-2:             #E8A85C;
+  --chart-3:             #6FAE7E;
+  --chart-4:             #8A6479;
+  --chart-5:             #B07A90;
+  --sidebar:             var(--bg-content);
+  --sidebar-foreground:  var(--fg-primary);
+  --sidebar-border:      var(--border-color);
+}
+
+/* ===== DARK MODE =====
+   Warm plum dark — same pink accent, deep backgrounds */
+
+.dark {
+  --bg-page:    #1A0D14;
+  --bg-content: #231018;
+  --bg-card:    #2E1520;
+
+  --fg-primary: #F5E0EA;
+  --fg-muted:   #B07A90;
+
+  --brand:       #D9758D;
+  --brand-hover: #E88FA0;
+  --brand-soft:  #4A1F2E;
+
+  --border-color: #4A2535;
+
+  /* shadcn overrides — dark */
+  --background:          var(--bg-content);
+  --foreground:          var(--fg-primary);
+  --card:                var(--bg-card);
+  --card-foreground:     var(--fg-primary);
+  --popover:             var(--bg-card);
+  --popover-foreground:  var(--fg-primary);
+  --primary:             var(--brand);
+  --primary-foreground:  #FFFFFF;
+  --secondary:           var(--brand-soft);
+  --secondary-foreground: var(--fg-primary);
+  --muted:               var(--brand-soft);
+  --muted-foreground:    var(--fg-muted);
+  --accent:              var(--brand-soft);
+  --accent-foreground:   var(--fg-primary);
+  --destructive:         #E05A68;
+  --destructive-foreground: #FFFFFF;
+  --border:              var(--border-color);
+  --input:               var(--border-color);
+  --ring:                var(--brand);
+  --chart-1:             var(--brand);
+  --chart-2:             #E8A85C;
+  --chart-3:             #6FAE7E;
+  --chart-4:             #B07A90;
+  --chart-5:             #D9B0BC;
+  --sidebar:             var(--bg-content);
+  --sidebar-foreground:  var(--fg-primary);
+  --sidebar-border:      var(--border-color);
+}
+
+/* ============================================================
+   ALTERNATE PALETTES
+   To switch: copy one block below and replace the :root palette block above.
+
+   MINT VARIANT
+   --bg-page: #D4F0DD; --bg-content: #FFFBF5; --bg-card: #FFFFFF;
+   --fg-primary: #2D5C3F; --fg-muted: #6B8A77;
+   --brand: #E89B5C; --brand-hover: #C97E40; --brand-soft: #FAE9D6;
+   --border-color: #C5DECD;
+
+   SKY VARIANT
+   --bg-page: #D5E8F5; --bg-content: #FCFCFC; --bg-card: #FFFFFF;
+   --fg-primary: #1F3A5C; --fg-muted: #607890;
+   --brand: #F08C81; --brand-hover: #D77268; --brand-soft: #FCE0DB;
+   --border-color: #BFD6E8;
+
+   MYSPACE BLACK (dark-first)
+   --bg-page: #0F0F12; --bg-content: #1A1A20; --bg-card: #222228;
+   --fg-primary: #F2F2F2; --fg-muted: #8E8E95;
+   --brand: #39D4E5; --brand-hover: #21B5C5; --brand-soft: #1F3540;
+   --border-color: #2A2A32;
+   ============================================================ */
