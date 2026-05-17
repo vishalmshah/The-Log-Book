@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useTransition } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { saveExercises, saveFocusNames, saveWeeklyLabels, type ExerciseRow } from "@/lib/actions";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { saveExercises, saveFocusNames, saveWeeklyLabels, signOut, deleteAccount, type ExerciseRow } from "@/lib/actions";
 import { Trash2, Plus } from "lucide-react";
 
 // ── Shared debounce hook ──────────────────────────────────────────────────────
@@ -94,6 +96,73 @@ export function WeeklyLabelsForm({ initial }: WeeklyLabelsProps) {
         </div>
       ))}
       <SaveStatus status={status} />
+    </div>
+  );
+}
+
+// ── Account panel ─────────────────────────────────────────────────────────────
+
+export function AccountPanel({ email }: { email: string }) {
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isPendingLogout, startLogout] = useTransition();
+  const [isPendingDelete, startDelete] = useTransition();
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Signed in as <span className="font-medium text-foreground">{email}</span>
+      </p>
+
+      <div className="flex flex-wrap gap-3">
+        <Button variant="outline" onClick={() => setLogoutOpen(true)}>
+          Log out
+        </Button>
+        <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+          Delete account
+        </Button>
+      </div>
+
+      {/* Log out confirmation */}
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log out?</DialogTitle>
+            <DialogDescription>You&apos;ll need a magic link to sign back in.</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-2">
+            <Button
+              onClick={() => startLogout(() => signOut())}
+              disabled={isPendingLogout}
+            >
+              {isPendingLogout ? "Logging out…" : "Log out"}
+            </Button>
+            <Button variant="ghost" onClick={() => setLogoutOpen(false)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete account confirmation */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete account?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes your account and all practice data. There&apos;s no undo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="destructive"
+              onClick={() => startDelete(() => deleteAccount())}
+              disabled={isPendingDelete}
+            >
+              {isPendingDelete ? "Deleting…" : "Yes, delete everything"}
+            </Button>
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

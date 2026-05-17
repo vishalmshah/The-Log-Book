@@ -2,7 +2,7 @@ import { createServerClient } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ExerciseEditor, FocusNamesForm, WeeklyLabelsForm } from "./editor";
+import { ExerciseEditor, FocusNamesForm, WeeklyLabelsForm, AccountPanel } from "./editor";
 import { PageContainer } from "@/components/page-container";
 
 export default async function SettingsPage() {
@@ -14,14 +14,49 @@ export default async function SettingsPage() {
     .from("user_focus_and_exercises").select("*").eq("user_id", user.id).single();
 
   if (!config) {
-    const blank = { name: "", all_ex: [], focus_bool: [], notes: [], focus_ex: [] };
+    function cat(name: string, exercises: { ex: string; focused: boolean; note: string }[]) {
+      return {
+        name,
+        all_ex:    exercises.map((e) => e.ex),
+        focus_bool: exercises.map((e) => e.focused),
+        notes:     exercises.map((e) => e.note),
+        focus_ex:  exercises.filter((e) => e.focused).map((e) => e.ex),
+      };
+    }
+
     await supabase.from("user_focus_and_exercises").insert({
       user_id: user.id,
-      spine: { ...blank, name: "Spine" },
-      focus_1: { ...blank, name: "Focus 1" },
-      focus_2: { ...blank, name: "Focus 2" },
-      focus_3: { ...blank, name: "Focus 3" },
-      weekly_focus: { weekly_A: "", weekly_B: "", weekly_C: "" },
+      spine: cat("Spine", [
+        { ex: "Technique warmup",  focused: true,  note: "Rote speed exercise with metronome — clean before fast" },
+        { ex: "Fretboard Trainer", focused: true,  note: "Rotating string focus — currently weakest: D, G, B" },
+        { ex: "Leavitt reading",   focused: true,  note: "One new exercise + previous review" },
+        { ex: "Transcription",     focused: true,  note: "At least one phrase — sing it, notate it, play it" },
+      ]),
+      focus_1: cat("Guitar", [
+        { ex: "Scale, saying notes",   focused: true,  note: "Week's scale in focus position, name notes aloud" },
+        { ex: "Triad inversions",      focused: true,  note: "I, IV, V on one string set, all three inversions" },
+        { ex: "1-2-3-4 chromatic",     focused: true,  note: "Across all strings, strict alternate picking" },
+        { ex: "Spider exercise",       focused: false, note: "1-3-2-4 and other permutations" },
+        { ex: "Scale-only improv",     focused: false, note: "Backing track in the week's key, scale position only" },
+        { ex: "Chord-tone improv",     focused: false, note: "" },
+        { ex: "Songwriting fragment",  focused: false, note: "4 bars, or capture an idea in a voice memo" },
+      ]),
+      focus_2: cat("Voice", [
+        { ex: "Song work",             focused: true,  note: "Work small sections, record and listen back" },
+        { ex: "Sing the transcription",focused: true,  note: "Week's phrase with dynamics and phrasing" },
+        { ex: "Breath support",        focused: true,  note: "" },
+        { ex: "Range work",            focused: false, note: "" },
+        { ex: "Drone matching",        focused: false, note: "" },
+      ]),
+      focus_3: cat("Creative", [
+        { ex: "Songwriting fragment",  focused: true,  note: "4 bars, or capture an idea in a voice memo" },
+        { ex: "Scale-only improv",     focused: true,  note: "Backing track in the week's key" },
+        { ex: "Sing-play trading",     focused: true,  note: "Trade sung lines with played lines" },
+        { ex: "Chord-tone improv",     focused: false, note: "" },
+        { ex: "Transcription deep dive",focused: false,note: "Pick a phrase, learn it fully by ear" },
+        { ex: "Improvise then transcribe",focused: false,note: "" },
+      ]),
+      weekly_focus: { weekly_A: "Song", weekly_B: "Key", weekly_C: "" },
     });
     redirect("/settings");
   }
@@ -60,6 +95,10 @@ export default async function SettingsPage() {
         <CardHeader><CardTitle>Weekly Focus Areas</CardTitle><CardDescription>Category names for your weekly planning (e.g. "Technique", "Theory").</CardDescription></CardHeader>
         <CardContent><WeeklyLabelsForm initial={weekly_focus} /></CardContent>
       </Card>
+
+      <Separator />
+
+      <AccountPanel email={user.email ?? ""} />
     </div>
     </PageContainer>
   );

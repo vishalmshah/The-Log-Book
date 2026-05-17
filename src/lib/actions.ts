@@ -44,6 +44,18 @@ export async function getStreak(): Promise<number> {
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
+export async function signOut() {
+  const supabase = await createServerClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}
+
+export async function deleteAccount() {
+  const { supabase } = await getUser();
+  await supabase.rpc("delete_account");
+  redirect("/login");
+}
+
 export async function sendMagicLink(formData: FormData) {
   const email = formData.get("email") as string;
   const supabase = await createServerClient();
@@ -62,6 +74,7 @@ export async function sendMagicLink(formData: FormData) {
 export interface ExerciseEntry {
   exercise: string;
   sessionNotes: string;
+  audioUrl?: string;
 }
 
 export interface SessionPayload {
@@ -74,19 +87,21 @@ export interface SessionPayload {
   focusStars: number | null;
   additionalNotes: string;
   practiceDuration: string; // "HH:MM:SS"
+  completed: boolean;
 }
 
 export async function saveSession(payload: SessionPayload) {
   const { supabase, user } = await getUser();
   const { week, year } = getISOWeek(new Date(payload.date + "T12:00:00"));
 
-  await supabase.from("session_logs").upsert(
+  const { error: saveError } = await supabase.from("session_logs").upsert(
     {
       user_id: user.id,
       date: payload.date,
       week,
       year,
       todays_focus: payload.todaysFocus,
+      completed: payload.completed,
       exercises_finished: {
         spine: payload.spineEntries,
         primary: payload.primaryEntries,
@@ -101,12 +116,13 @@ export async function saveSession(payload: SessionPayload) {
     },
     { onConflict: "user_id,date" }
   );
+  if (saveError) console.error("[saveSession]", saveError.message);
 
   revalidatePath("/log");
   revalidatePath("/dashboard");
 }
 
-export async function getExerciseHistory(exercise: string): Promise<{ date: string; notes: string }[]> {
+export async function getExerciseHistory(exercise: string): Promise<{ date: string; notes: string; audioUrl?: string }[]> {
   const { supabase, user } = await getUser();
   const { data } = await supabase
     .from("session_logs")
@@ -115,12 +131,14 @@ export async function getExerciseHistory(exercise: string): Promise<{ date: stri
     .order("date", { ascending: false })
     .limit(50);
 
-  const results: { date: string; notes: string }[] = [];
+  const results: { date: string; notes: string; audioUrl?: string }[] = [];
   for (const row of data ?? []) {
     const ef = row.exercises_finished as Record<string, ExerciseEntry[]>;
     const allEntries = [...(ef?.spine ?? []), ...(ef?.primary ?? []), ...(ef?.secondary ?? [])];
     const match = allEntries.find((e) => e.exercise === exercise);
-    if (match?.sessionNotes) results.push({ date: row.date, notes: match.sessionNotes });
+    if (match?.sessionNotes || match?.audioUrl) {
+      results.push({ date: row.date, notes: match.sessionNotes ?? "", audioUrl: match.audioUrl });
+    }
   }
   return results;
 }

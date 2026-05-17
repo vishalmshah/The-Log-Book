@@ -15,7 +15,9 @@ export default async function WeekPage({ searchParams }: Props) {
 
   const { date: dateParam } = await searchParams;
   const selectedDate = parseDateParam(dateParam);
-  const { week, year } = getISOWeek(selectedDate);
+  const { week, year, start } = getISOWeek(selectedDate);
+  const weekStartLabel = start.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  const todayStr = formatDateParam(new Date());
 
   const [{ data: config }, { data: weekLog }] = await Promise.all([
     supabase.from("user_focus_and_exercises").select("weekly_focus").eq("user_id", user.id).single(),
@@ -38,6 +40,8 @@ export default async function WeekPage({ searchParams }: Props) {
         year={year}
         labels={{ A: labels.weekly_A, B: labels.weekly_B, C: labels.weekly_C }}
         initialFocusInfo={initialFocusInfo}
+        weekStartLabel={weekStartLabel}
+        todayStr={todayStr}
       />
     </PageContainer>
   );
