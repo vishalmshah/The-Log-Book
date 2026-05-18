@@ -6,6 +6,7 @@ import { Metronome } from "@/components/metronome";
 import { NavBar } from "@/components/nav";
 import { Header } from "@/components/header";
 import { SWRegister } from "@/components/sw-register";
+import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
 const displayFont = VT323({
@@ -48,12 +49,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeProvider>
             <SWRegister />
             <NavBar />
-            <div className="flex min-w-0 flex-1 flex-col md:ml-52">
+            <AppShell>
               <Header />
               <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
                 {children}
               </main>
-            </div>
+            </AppShell>
             <FloatingTimer />
             <Metronome />
           </ThemeProvider>

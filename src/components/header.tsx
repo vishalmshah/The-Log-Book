@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
 import { getStreak } from "@/lib/actions";
+import { InfoDialog } from "@/components/info-dialog";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -21,14 +22,14 @@ export function Header() {
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
-    if (pathname === "/login" || pathname.startsWith("/auth")) return;
+    if (pathname === "/" || pathname === "/login" || pathname.startsWith("/auth")) return;
     getStreak().then(setStreak).catch(() => setStreak(null));
   }, [pathname]);
 
   const title = TITLES[pathname] ?? "";
   const isDark = resolvedTheme === "dark";
 
-  if (pathname === "/login" || pathname.startsWith("/auth")) return null;
+  if (pathname === "/" || pathname === "/login" || pathname.startsWith("/auth")) return null;
 
   return (
     <header
@@ -47,11 +48,12 @@ export function Header() {
         {/* Center: page title */}
         <span className="text-xs font-medium text-muted-foreground">{title}</span>
 
-        {/* Right: streak + theme toggle */}
+        {/* Right: streak + info + theme toggle */}
         <div className="flex items-center gap-3">
           {streak !== null && streak > 0 && (
             <span className="text-sm font-medium">🔥 {streak}</span>
           )}
+          {mounted && <InfoDialog />}
           {mounted && (
             <button
               type="button"

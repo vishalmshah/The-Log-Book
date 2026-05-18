@@ -13,7 +13,7 @@ const tabs = [
 
 export function NavBar() {
   const pathname = usePathname();
-  if (pathname === "/login" || pathname.startsWith("/auth")) return null;
+  if (pathname === "/" || pathname === "/login" || pathname.startsWith("/auth")) return null;
 
   return (
     <>

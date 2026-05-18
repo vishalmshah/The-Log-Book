@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { ChevronUp } from "lucide-react";
 
 const LOOKAHEAD_MS = 25;
@@ -139,7 +140,8 @@ export function Metronome() {
     setBpm(Math.round(60000 / avg));
   }
 
-  if (!mounted) return null;
+  const pathname = usePathname();
+  if (!mounted || pathname === "/") return null;
 
   const beatUnitSymbol = beatUnit === 8 ? "♪" : "♩";
 
