@@ -107,11 +107,10 @@ export function AccountPanel({ email }: { email: string }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isPendingLogout, startLogout] = useTransition();
   const [isPendingDelete, startDelete] = useTransition();
-  const [isExporting, setIsExporting] = useState(false);
+  const [isPendingExport, startExport] = useTransition();
 
-  async function handleExport() {
-    setIsExporting(true);
-    try {
+  function handleExport() {
+    startExport(async () => {
       const csv = await exportSessionsCSV();
       const blob = new Blob([csv], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
@@ -120,9 +119,7 @@ export function AccountPanel({ email }: { email: string }) {
       a.download = "practice_sessions.csv";
       a.click();
       URL.revokeObjectURL(url);
-    } finally {
-      setIsExporting(false);
-    }
+    });
   }
 
   return (
@@ -132,8 +129,8 @@ export function AccountPanel({ email }: { email: string }) {
       </p>
 
       <div className="flex flex-wrap gap-3">
-        <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-          {isExporting ? "Exporting…" : "Export data (CSV)"}
+        <Button variant="outline" onClick={handleExport} disabled={isPendingExport}>
+          {isPendingExport ? "Exporting…" : "Export data (CSV)"}
         </Button>
         <Button variant="outline" onClick={() => setLogoutOpen(true)}>
           Log out

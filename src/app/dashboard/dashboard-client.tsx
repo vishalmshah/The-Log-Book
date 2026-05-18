@@ -99,53 +99,46 @@ export function DashboardClient({
     [allLogged]
   );
 
-  const practicedSet = useMemo(
-    () => new Set(allLogged.map((s) => s.date)),
-    [allLogged]
-  );
-
   const dayColors = useMemo(
     () => buildDayColors(allLogged, focusColorMap),
     [allLogged, focusColorMap]
   );
 
-  // Filter by the viewed week / month (all-time = everything) — stats use nonFree
-  const filteredSessions = useMemo(() => {
+  function filterByPeriod<T extends { date: string; week: number; year: number }>(
+    sessions: T[]
+  ): T[] {
     if (period === "week") {
       const { week, year } = getISOWeek(referenceDate);
-      return nonFree.filter((s) => s.week === week && s.year === year);
+      return sessions.filter((s) => s.week === week && s.year === year);
     }
     if (period === "month") {
       const m = referenceDate.getMonth();
       const y = referenceDate.getFullYear();
-      return nonFree.filter((s) => {
+      return sessions.filter((s) => {
         const d = new Date(s.date + "T12:00:00");
         return d.getMonth() === m && d.getFullYear() === y;
       });
     }
-    return nonFree;
-  }, [nonFree, period, referenceDate]);
+    return sessions;
+  }
+
+  // Stats use nonFree (excludes Free sessions); list uses allLogged (includes Free)
+  const filteredSessions = useMemo(
+    () => filterByPeriod(nonFree),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nonFree, period, referenceDate]
+  );
 
   const totalMins = useMemo(
     () => filteredSessions.reduce((sum, s) => sum + parseMins(s.additional_notes?.practice_duration), 0),
     [filteredSessions]
   );
 
-  // Sessions list: all practiced sessions including Free (for the list below the stats)
-  const sessionList = useMemo(() => {
-    if (period === "alltime") return allLogged.slice(0, 10);
-    // For week/month, show allLogged (including Free) filtered to the viewed period
-    if (period === "week") {
-      const { week, year } = getISOWeek(referenceDate);
-      return allLogged.filter((s) => s.week === week && s.year === year).slice(0, 10);
-    }
-    const m = referenceDate.getMonth();
-    const y = referenceDate.getFullYear();
-    return allLogged.filter((s) => {
-      const d = new Date(s.date + "T12:00:00");
-      return d.getMonth() === m && d.getFullYear() === y;
-    }).slice(0, 10);
-  }, [allLogged, period, referenceDate]);
+  const sessionList = useMemo(
+    () => (period === "alltime" ? allLogged : filterByPeriod(allLogged)).slice(0, 10),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allLogged, period, referenceDate]
+  );
 
   // All-time stacked chart data — includes Free sessions as their own bar
   const stackedData = useMemo(() => {

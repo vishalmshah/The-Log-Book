@@ -383,7 +383,6 @@ function FocusSection({ category, entries, onChange, readOnly, date }: {
 export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus3, existing, showWeeklyPrompt, dayColors }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [, setSaved] = useState(false);
   const [weekPromptOpen, setWeekPromptOpen] = useState(showWeeklyPrompt);
   const ef = (existing?.exercises_finished ?? {}) as Record<string, unknown>;
 
@@ -459,7 +458,6 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
         practiceDuration: secondsToDuration(elapsed),
         completed: true,
       });
-      setSaved(true);
       setCompleted(true);
     });
   }

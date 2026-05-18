@@ -167,7 +167,8 @@ function csvCell(val: string | number | boolean | null | undefined): string {
 function hmsToDurationMin(hms?: string | null): string {
   if (!hms) return "";
   const [h, m, s] = hms.split(":").map(Number);
-  return String(Math.round(((h || 0) * 3600 + (m || 0) * 60 + (s || 0)) / 6) / 10);
+  const totalSeconds = (h || 0) * 3600 + (m || 0) * 60 + (s || 0);
+  return String(Math.round(totalSeconds / 60 * 10) / 10); // one decimal place
 }
 
 export async function exportSessionsCSV(): Promise<string> {
@@ -184,11 +185,12 @@ export async function exportSessionsCSV(): Promise<string> {
     "spine_exercises", "primary_exercises", "secondary_exercises",
   ];
 
+  const joinEx = (arr?: { exercise: string }[]) =>
+    (arr ?? []).map((e) => e.exercise).join(";");
+
   const rows = (data ?? []).map((s) => {
     const an = s.additional_notes as Record<string, unknown> | null;
     const ef = s.exercises_finished as Record<string, { exercise: string }[]> | null;
-    const joinEx = (arr?: { exercise: string }[]) =>
-      (arr ?? []).map((e) => e.exercise).join(";");
 
     return [
       csvCell(s.date),
