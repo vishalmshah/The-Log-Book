@@ -8,20 +8,20 @@
   /* ===== PALETTE =====
      Change these values to retheme. Everything else is derived. */
 
-  --bg-page:    #FFE8F0;   /* patterned page background */
-  --bg-content: #FFFBF5;   /* content card background */
-  --bg-card:    #FFFFFF;   /* cards within content */
+  --bg-page:    #DDD3B0;   /* aged parchment — staff lines show here */
+  --bg-content: #F8F2E3;   /* lighter paper for content card */
+  --bg-card:    #FDFAF2;   /* near-white for inner cards */
 
-  --fg-primary: #4A2540;   /* main text */
-  --fg-muted:   #8A6479;   /* secondary / label text */
+  --fg-primary: #2C1A0E;   /* dark sepia ink */
+  --fg-muted:   #7A6040;   /* warm brown / secondary text */
 
-  --brand:       #D9758D;  /* primary accent — buttons, active states */
-  --brand-hover: #C25A75;
-  --brand-soft:  #FCE4EC;  /* light tint for hover backgrounds */
+  --brand:       #9B2D20;  /* venetian red — like red pencil notation */
+  --brand-hover: #7A2018;
+  --brand-soft:  #F2E0DB;  /* very light warm blush for hover backgrounds */
 
-  --border-color: #E8C8D4;
-  --success:      #6FAE7E;
-  --warning:      #E8A85C;
+  --border-color: #C8BA96; /* warm tan */
+  --success:      #5A8A5A;
+  --warning:      #C4884A;
 
   /* ===== TYPOGRAPHY =====
      --font-vt323 and --font-karla are injected by next/font in layout.tsx */
@@ -52,37 +52,37 @@
   --muted-foreground:    var(--fg-muted);
   --accent:              var(--brand-soft);
   --accent-foreground:   var(--fg-primary);
-  --destructive:         #D94B5A;
+  --destructive:         #B03030;
   --destructive-foreground: #FFFFFF;
   --border:              var(--border-color);
   --input:               var(--border-color);
   --ring:                var(--brand);
   --chart-1:             var(--brand);
-  --chart-2:             #E8A85C;
-  --chart-3:             #6FAE7E;
-  --chart-4:             #8A6479;
-  --chart-5:             #B07A90;
+  --chart-2:             #C4884A;
+  --chart-3:             #5A8A5A;
+  --chart-4:             #7A6040;
+  --chart-5:             #A05030;
   --sidebar:             var(--bg-content);
   --sidebar-foreground:  var(--fg-primary);
   --sidebar-border:      var(--border-color);
 }
 
 /* ===== DARK MODE =====
-   Warm plum dark — same pink accent, deep backgrounds */
+   Dark leather / night paper — staff lines on deep warm brown */
 
 .dark {
-  --bg-page:    #1A0D14;
-  --bg-content: #231018;
-  --bg-card:    #2E1520;
+  --bg-page:    #1A1510;
+  --bg-content: #22190E;
+  --bg-card:    #2C2015;
 
-  --fg-primary: #F5E0EA;
-  --fg-muted:   #B07A90;
+  --fg-primary: #EFE5C8;   /* aged cream */
+  --fg-muted:   #9A876A;
 
-  --brand:       #D9758D;
-  --brand-hover: #E88FA0;
-  --brand-soft:  #4A1F2E;
+  --brand:       #C04535;  /* slightly brighter red for dark bg */
+  --brand-hover: #D85545;
+  --brand-soft:  #4A2218;
 
-  --border-color: #4A2535;
+  --border-color: #3C3020;
 
   /* shadcn overrides — dark */
   --background:          var(--bg-content);
@@ -99,40 +99,17 @@
   --muted-foreground:    var(--fg-muted);
   --accent:              var(--brand-soft);
   --accent-foreground:   var(--fg-primary);
-  --destructive:         #E05A68;
+  --destructive:         #C04040;
   --destructive-foreground: #FFFFFF;
   --border:              var(--border-color);
   --input:               var(--border-color);
   --ring:                var(--brand);
   --chart-1:             var(--brand);
-  --chart-2:             #E8A85C;
-  --chart-3:             #6FAE7E;
-  --chart-4:             #B07A90;
-  --chart-5:             #D9B0BC;
+  --chart-2:             #C4884A;
+  --chart-3:             #5A8A5A;
+  --chart-4:             #9A876A;
+  --chart-5:             #C09070;
   --sidebar:             var(--bg-content);
   --sidebar-foreground:  var(--fg-primary);
   --sidebar-border:      var(--border-color);
 }
-
-/* ============================================================
-   ALTERNATE PALETTES
-   To switch: copy one block below and replace the :root palette block above.
-
-   MINT VARIANT
-   --bg-page: #D4F0DD; --bg-content: #FFFBF5; --bg-card: #FFFFFF;
-   --fg-primary: #2D5C3F; --fg-muted: #6B8A77;
-   --brand: #E89B5C; --brand-hover: #C97E40; --brand-soft: #FAE9D6;
-   --border-color: #C5DECD;
-
-   SKY VARIANT
-   --bg-page: #D5E8F5; --bg-content: #FCFCFC; --bg-card: #FFFFFF;
-   --fg-primary: #1F3A5C; --fg-muted: #607890;
-   --brand: #F08C81; --brand-hover: #D77268; --brand-soft: #FCE0DB;
-   --border-color: #BFD6E8;
-
-   MYSPACE BLACK (dark-first)
-   --bg-page: #0F0F12; --bg-content: #1A1A20; --bg-card: #222228;
-   --fg-primary: #F2F2F2; --fg-muted: #8E8E95;
-   --brand: #39D4E5; --brand-hover: #21B5C5; --brand-soft: #1F3540;
-   --border-color: #2A2A32;
-   ============================================================ */
