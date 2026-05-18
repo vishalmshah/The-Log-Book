@@ -42,6 +42,13 @@ export function LandingPage() {
             Start tracking →
           </Link>
           <Link
+            href="/demo"
+            className="rounded-lg border px-6 py-2.5 text-sm font-medium transition-transform hover:-translate-y-0.5"
+            style={{ borderColor: "var(--brand)", color: "var(--brand)" }}
+          >
+            Try the demo →
+          </Link>
+          <Link
             href={REPO}
             target="_blank"
             rel="noopener noreferrer"
@@ -147,13 +154,20 @@ export function LandingPage() {
               LinkedIn
             </Link>.
           </p>
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap gap-3">
             <Link
               href="/login"
               className="inline-block rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-transform hover:-translate-y-0.5"
               style={{ background: "var(--brand)" }}
             >
               Get started →
+            </Link>
+            <Link
+              href="/demo"
+              className="inline-block rounded-lg border px-6 py-2.5 text-sm font-medium transition-transform hover:-translate-y-0.5"
+              style={{ borderColor: "var(--brand)", color: "var(--brand)" }}
+            >
+              Try the demo →
             </Link>
           </div>
         </div>

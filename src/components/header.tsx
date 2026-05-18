@@ -38,9 +38,9 @@ export function Header() {
     >
       <div className="flex flex-1 items-center justify-between">
         {/* Left: app name — mobile only (sidebar shows it on desktop) */}
-        <span className="font-display text-xl md:hidden" style={{ color: "var(--brand)" }}>
-          The Log Book
-        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.svg" alt="The Log Book" className="md:hidden h-7 w-auto"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/logo.png"; }} />
 
         {/* Center: page title */}
         <span className="text-xs font-medium text-muted-foreground">{title}</span>
