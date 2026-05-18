@@ -7,7 +7,7 @@ export function PageContainer({ children, wide = false }: Props) {
   return (
     <div className={`mx-auto my-4 px-4 md:my-8 ${wide ? "max-w-4xl" : "max-w-2xl"}`}>
       <div
-        className="rounded-[var(--radius-lg)] border p-6 shadow-lg"
+        className="rounded-[var(--radius-lg)] border p-4 shadow-lg md:p-6"
         style={{
           background: "var(--bg-content)",
           borderColor: "var(--border-color)",

@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import { getISOWeek, parseDateParam, formatDateParam } from "@/lib/week";
+import { buildFocusColorMap, buildDayColors } from "@/lib/focus-colors";
 import { LogForm } from "./form";
 import { PageContainer } from "@/components/page-container";
 
@@ -18,14 +19,18 @@ export default async function LogPage({ searchParams }: Props) {
   const dateStr = formatDateParam(selectedDate);
   const { week, year } = getISOWeek(selectedDate);
 
-  const [{ data: config }, { data: weekLog }, { data: session }, { count: weekSessionCount }] = await Promise.all([
+  const [{ data: config }, { data: weekLog }, { data: session }, { count: weekSessionCount }, { data: weekSessions }] = await Promise.all([
     supabase.from("user_focus_and_exercises").select("spine, focus_1, focus_2, focus_3").eq("user_id", user.id).single(),
     supabase.from("weekly_logs").select("focus_info").eq("user_id", user.id).eq("week_num", week).eq("year", year).maybeSingle(),
     supabase.from("session_logs").select("todays_focus, exercises_finished, additional_notes, completed").eq("user_id", user.id).eq("date", dateStr).maybeSingle(),
     supabase.from("session_logs").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("week", week).eq("year", year),
+    supabase.from("session_logs").select("date, todays_focus").eq("user_id", user.id).eq("week", week).eq("year", year),
   ]);
 
   if (!config) redirect("/settings");
+
+  const focusNames = [config.focus_1?.name, config.focus_2?.name, config.focus_3?.name].filter(Boolean) as string[];
+  const dayColors = buildDayColors(weekSessions ?? [], buildFocusColorMap(focusNames));
 
   // Show prompt only when: first session of the week AND weekly intentions not yet set
   const weekLogHasContent = weekLog !== null &&
@@ -57,6 +62,7 @@ export default async function LogPage({ searchParams }: Props) {
         focus3={withNotes(config.focus_3)}
         existing={session}
         showWeeklyPrompt={showWeeklyPrompt}
+        dayColors={dayColors}
       />
     </PageContainer>
   );

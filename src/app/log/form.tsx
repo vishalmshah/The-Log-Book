@@ -198,6 +198,7 @@ interface Props {
   focus3: ExerciseCategory;
   existing: ExistingSession | null;
   showWeeklyPrompt: boolean;
+  dayColors?: Record<string, string>;
 }
 
 // ── History dialog ────────────────────────────────────────────────────────────
@@ -379,7 +380,7 @@ function FocusSection({ category, entries, onChange, readOnly, date }: {
 
 // ── Main form ─────────────────────────────────────────────────────────────────
 
-export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus3, existing, showWeeklyPrompt }: Props) {
+export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus3, existing, showWeeklyPrompt, dayColors }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [, setSaved] = useState(false);
@@ -488,7 +489,7 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
       </Dialog>
 
       {/* Week strip date nav */}
-      <WeekStrip selectedDate={initialDate} onDateChange={(d) => { stopTimer(); router.push(`/log?date=${d}`); }} />
+      <WeekStrip selectedDate={initialDate} onDateChange={(d) => { stopTimer(); router.push(`/log?date=${d}`); }} dayColors={dayColors} />
 
       {/* Weekly focus summary */}
       {weeklyFocus.length > 0 && (
@@ -515,7 +516,7 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
               <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {allFocusNames.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-                <SelectItem value="Skipped">Skipped</SelectItem>
+                <SelectItem value="Free">Free</SelectItem>
               </SelectContent>
             </Select>
             {second !== null ? (
@@ -531,7 +532,7 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
                   className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
               </>
             ) : (
-              primary !== "Skipped" && allFocusNames.filter((n) => n !== primary).length > 0 && (
+              primary !== "Free" && allFocusNames.filter((n) => n !== primary).length > 0 && (
                 <button type="button" onClick={() => setSecond(allFocusNames.find((n) => n !== primary) ?? null)}
                   className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
                   <Plus className="h-4 w-4" />Add second focus
@@ -600,7 +601,7 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
           <Separator />
 
           {/* Primary focus */}
-          {primary === "Skipped" ? (
+          {primary === "Free" ? (
             <p className="text-sm text-muted-foreground">No worries — try to get some practice in later this week.</p>
           ) : primaryCategory ? (
             <div className="space-y-3">

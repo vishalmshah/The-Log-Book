@@ -23,9 +23,10 @@ function addDays(date: Date, n: number): Date {
 interface Props {
   selectedDate: string; // YYYY-MM-DD
   onDateChange: (date: string) => void;
+  dayColors?: Record<string, string>; // date → CSS background (color or gradient)
 }
 
-export function WeekStrip({ selectedDate, onDateChange }: Props) {
+export function WeekStrip({ selectedDate, onDateChange, dayColors }: Props) {
   const selected = new Date(selectedDate + "T12:00:00");
   const todayStr = formatDateParam(new Date());
   const monday = startOfWeek(selected);
@@ -43,25 +44,30 @@ export function WeekStrip({ selectedDate, onDateChange }: Props) {
   return (
     <div className="select-none space-y-2">
       <p className="text-sm font-medium text-muted-foreground">{monthLabel}</p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <button type="button" onClick={prevWeek}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-muted">
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-muted">
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <div className="flex flex-1 justify-between">
+        <div className="flex min-w-0 flex-1 justify-between">
           {days.map(({ date, str, label }) => {
             const isSelected = str === selectedDate;
             const isToday = str === todayStr;
             return (
               <button key={str} type="button" onClick={() => onDateChange(str)}
-                className="flex flex-col items-center gap-1 rounded-lg px-1 py-1.5 transition-colors hover:bg-muted">
-                <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
-                <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors
-                  ${isSelected ? "bg-primary text-primary-foreground" : ""}
-                  ${isToday && !isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}
-                  ${!isSelected && !isToday ? "text-foreground" : ""}
-                `}>
+                className="flex flex-col items-center gap-0.5 rounded-lg px-0.5 py-1 transition-colors hover:bg-muted">
+                <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-colors
+                    ${isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}
+                    ${!dayColors?.[str] && isToday && !isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}
+                  `}
+                  style={{
+                    background: dayColors?.[str] ?? "transparent",
+                    color: dayColors?.[str] ? "#fff" : "var(--fg-primary)",
+                  }}
+                >
                   {date.getDate()}
                 </span>
               </button>
@@ -70,7 +76,7 @@ export function WeekStrip({ selectedDate, onDateChange }: Props) {
         </div>
 
         <button type="button" onClick={nextWeek}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-muted">
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-muted">
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>

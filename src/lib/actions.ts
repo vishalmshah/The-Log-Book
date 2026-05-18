@@ -24,7 +24,7 @@ export async function getStreak(): Promise<number> {
     .limit(90);
 
   const practiced = new Set(
-    (data ?? []).filter((r) => r.todays_focus !== "Skipped").map((r) => r.date as string)
+    (data ?? []).filter((r) => r.todays_focus !== "Free" && r.todays_focus !== "Skipped").map((r) => r.date as string)
   );
 
   const today = new Date();

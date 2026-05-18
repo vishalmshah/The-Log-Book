@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import { getISOWeek, parseDateParam, formatDateParam } from "@/lib/week";
+import { buildFocusColorMap, buildDayColors } from "@/lib/focus-colors";
 import { WeekForm } from "./form";
 import { PageContainer } from "@/components/page-container";
 
@@ -19,10 +20,14 @@ export default async function WeekPage({ searchParams }: Props) {
   const weekStartLabel = start.toLocaleDateString("en-US", { month: "long", day: "numeric" });
   const todayStr = formatDateParam(new Date());
 
-  const [{ data: config }, { data: weekLog }] = await Promise.all([
-    supabase.from("user_focus_and_exercises").select("weekly_focus").eq("user_id", user.id).single(),
+  const [{ data: config }, { data: weekLog }, { data: weekSessions }] = await Promise.all([
+    supabase.from("user_focus_and_exercises").select("weekly_focus, focus_1, focus_2, focus_3").eq("user_id", user.id).single(),
     supabase.from("weekly_logs").select("focus_info").eq("user_id", user.id).eq("week_num", week).eq("year", year).maybeSingle(),
+    supabase.from("session_logs").select("date, todays_focus").eq("user_id", user.id).eq("week", week).eq("year", year),
   ]);
+
+  const focusNames = [config?.focus_1?.name, config?.focus_2?.name, config?.focus_3?.name].filter(Boolean) as string[];
+  const dayColors = buildDayColors(weekSessions ?? [], buildFocusColorMap(focusNames));
 
   const labels = config?.weekly_focus ?? { weekly_A: "", weekly_B: "", weekly_C: "" };
   const focusInfo = weekLog?.focus_info ?? {};
@@ -42,6 +47,7 @@ export default async function WeekPage({ searchParams }: Props) {
         initialFocusInfo={initialFocusInfo}
         weekStartLabel={weekStartLabel}
         todayStr={todayStr}
+        dayColors={dayColors}
       />
     </PageContainer>
   );

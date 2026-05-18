@@ -16,9 +16,10 @@ interface Props {
   initialFocusInfo: Record<string, string>;
   weekStartLabel: string;
   todayStr: string;
+  dayColors?: Record<string, string>;
 }
 
-export function WeekForm({ initialDate, weekNum, year, labels, initialFocusInfo, weekStartLabel, todayStr }: Props) {
+export function WeekForm({ initialDate, weekNum, year, labels, initialFocusInfo, weekStartLabel, todayStr, dayColors }: Props) {
   const router = useRouter();
   const [focusInfo, setFocusInfo] = useState(initialFocusInfo);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -48,20 +49,14 @@ export function WeekForm({ initialDate, weekNum, year, labels, initialFocusInfo,
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="font-display text-5xl" style={{ color: "var(--brand)" }}>
-          Week of {weekStartLabel}
-        </h1>
-        <Link href={`/log?date=${todayStr}`}
-          className="shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-transform hover:-translate-y-0.5"
-          style={{ background: "var(--brand)", color: "#fff" }}>
-          Log today&apos;s session
-        </Link>
-      </div>
+      <h1 className="font-display text-5xl" style={{ color: "var(--brand)" }}>
+        Week of {weekStartLabel}
+      </h1>
 
       <WeekStrip
         selectedDate={initialDate}
         onDateChange={(d) => router.push(`/week?date=${d}`)}
+        dayColors={dayColors}
       />
 
       <div className="space-y-5">
@@ -79,6 +74,12 @@ export function WeekForm({ initialDate, weekNum, year, labels, initialFocusInfo,
           </div>
         ))}
       </div>
+
+      <Link href={`/log?date=${todayStr}`}
+        className="block w-full rounded-lg py-3 text-center text-sm font-medium transition-transform hover:-translate-y-0.5"
+        style={{ background: "var(--brand)", color: "#fff" }}>
+        Log today&apos;s session
+      </Link>
     </div>
   );
 }
