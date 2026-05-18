@@ -1,15 +1,17 @@
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
+  const token_hash = searchParams.get("token_hash");
   const next = searchParams.get("next") ?? "/dashboard";
 
-  if (code) {
+  if (token_hash) {
     const supabase = await createServerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    const { error } = await supabase.auth.verifyOtp({ type: "email", token_hash });
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`);
+    }
   }
 
   return NextResponse.redirect(`${origin}/login?error=Could+not+authenticate`);
