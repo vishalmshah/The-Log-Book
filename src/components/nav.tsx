@@ -18,13 +18,13 @@ export function NavBar() {
   return (
     <>
       {/* ── Mobile: bottom tab bar ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-stretch border-t md:hidden"
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex min-h-16 items-stretch border-t pb-[env(safe-area-inset-bottom)] md:hidden"
         style={{ background: "var(--bg-content)", borderColor: "var(--border-color)" }}>
         {tabs.map(({ href, icon: Icon, label }) => {
           const active = pathname.startsWith(href);
           return (
             <Link key={href} href={href}
-              className="flex flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors"
+              className="flex flex-1 flex-col items-center justify-center gap-1 pb-2 pt-3 text-xs transition-colors"
               style={{ color: active ? "var(--brand)" : "var(--fg-muted)" }}>
               <Icon className={`h-5 w-5 ${active ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
               <span>{label}</span>

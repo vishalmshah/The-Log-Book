@@ -5,7 +5,7 @@ interface Props {
 
 export function PageContainer({ children, wide = false }: Props) {
   return (
-    <div className={`mx-auto my-8 px-4 ${wide ? "max-w-4xl" : "max-w-2xl"}`}>
+    <div className={`mx-auto my-4 px-4 md:my-8 ${wide ? "max-w-4xl" : "max-w-2xl"}`}>
       <div
         className="rounded-[var(--radius-lg)] border p-6 shadow-lg"
         style={{

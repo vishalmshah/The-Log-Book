@@ -20,7 +20,10 @@ export function Header() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { getStreak().then(setStreak).catch(() => setStreak(null)); }, []);
+  useEffect(() => {
+    if (pathname === "/login" || pathname.startsWith("/auth")) return;
+    getStreak().then(setStreak).catch(() => setStreak(null));
+  }, [pathname]);
 
   const title = TITLES[pathname] ?? "";
   const isDark = resolvedTheme === "dark";
