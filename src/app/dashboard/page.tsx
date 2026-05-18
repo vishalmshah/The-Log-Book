@@ -17,7 +17,7 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .order("date", { ascending: false }),
     supabase
-      .from("user_focus_and_exercises")
+      .from("user_info")
       .select("focus_1, focus_2, focus_3")
       .eq("user_id", user.id)
       .single(),

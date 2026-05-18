@@ -20,7 +20,7 @@ export default async function LogPage({ searchParams }: Props) {
   const { week, year } = getISOWeek(selectedDate);
 
   const [{ data: config }, { data: weekLog }, { data: session }, { count: weekSessionCount }, { data: weekSessions }] = await Promise.all([
-    supabase.from("user_focus_and_exercises").select("spine, focus_1, focus_2, focus_3").eq("user_id", user.id).single(),
+    supabase.from("user_info").select("spine, focus_1, focus_2, focus_3").eq("user_id", user.id).single(),
     supabase.from("weekly_logs").select("focus_info").eq("user_id", user.id).eq("week_num", week).eq("year", year).maybeSingle(),
     supabase.from("session_logs").select("todays_focus, exercises_finished, additional_notes, completed").eq("user_id", user.id).eq("date", dateStr).maybeSingle(),
     supabase.from("session_logs").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("week", week).eq("year", year),

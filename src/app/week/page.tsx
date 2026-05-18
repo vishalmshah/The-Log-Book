@@ -21,7 +21,7 @@ export default async function WeekPage({ searchParams }: Props) {
   const todayStr = formatDateParam(new Date());
 
   const [{ data: config }, { data: weekLog }, { data: weekSessions }] = await Promise.all([
-    supabase.from("user_focus_and_exercises").select("weekly_focus, focus_1, focus_2, focus_3").eq("user_id", user.id).single(),
+    supabase.from("user_info").select("weekly_focus, focus_1, focus_2, focus_3").eq("user_id", user.id).single(),
     supabase.from("weekly_logs").select("focus_info").eq("user_id", user.id).eq("week_num", week).eq("year", year).maybeSingle(),
     supabase.from("session_logs").select("date, todays_focus").eq("user_id", user.id).eq("week", week).eq("year", year),
   ]);

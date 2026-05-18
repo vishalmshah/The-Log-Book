@@ -216,14 +216,14 @@ export async function exportSessionsCSV(): Promise<string> {
 export async function saveFocusNames(names: { focus1: string; focus2: string; focus3: string }) {
   const { supabase, user } = await getUser();
   const { data } = await supabase
-    .from("user_focus_and_exercises")
+    .from("user_info")
     .select("focus_1, focus_2, focus_3")
     .eq("user_id", user.id)
     .single();
   if (!data) throw new Error("No config — visit /settings first");
 
   await supabase
-    .from("user_focus_and_exercises")
+    .from("user_info")
     .update({
       focus_1: { ...data.focus_1, name: names.focus1 },
       focus_2: { ...data.focus_2, name: names.focus2 },
@@ -241,7 +241,7 @@ export interface ExerciseRow {
 
 export async function saveExercises(fieldName: string, categoryName: string, rows: ExerciseRow[]) {
   const { supabase, user } = await getUser();
-  await supabase.from("user_focus_and_exercises").upsert(
+  await supabase.from("user_info").upsert(
     {
       user_id: user.id,
       [fieldName]: {
@@ -259,7 +259,7 @@ export async function saveExercises(fieldName: string, categoryName: string, row
 
 export async function saveWeeklyLabels(labels: { weekly_A: string; weekly_B: string; weekly_C: string }) {
   const { supabase, user } = await getUser();
-  await supabase.from("user_focus_and_exercises").upsert(
+  await supabase.from("user_info").upsert(
     {
       user_id: user.id,
       weekly_focus: {

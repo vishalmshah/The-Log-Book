@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   if (!user) redirect("/login");
 
   const { data: config } = await supabase
-    .from("user_focus_and_exercises").select("*").eq("user_id", user.id).single();
+    .from("user_info").select("*").eq("user_id", user.id).single();
 
   if (!config) {
     function cat(name: string, exercises: { ex: string; focused: boolean; note: string }[]) {
@@ -24,7 +24,7 @@ export default async function SettingsPage() {
       };
     }
 
-    await supabase.from("user_focus_and_exercises").insert({
+    await supabase.from("user_info").insert({
       user_id: user.id,
       spine: cat("Spine", [
         { ex: "Technique warmup",  focused: true,  note: "Rote speed exercise with metronome — clean before fast" },
