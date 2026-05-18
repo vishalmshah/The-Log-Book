@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { VT323, Karla } from "next/font/google";
+import localFont from "next/font/local";
+import { Karla } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TimerProvider, FloatingTimer } from "@/components/timer-context";
 import { Metronome } from "@/components/metronome";
@@ -9,9 +10,8 @@ import { SWRegister } from "@/components/sw-register";
 import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
-const displayFont = VT323({
-  weight: "400",
-  subsets: ["latin"],
+const displayFont = localFont({
+  src: "../../public/fonts/Thwack.ttf",
   variable: "--font-vt323",
   display: "swap",
 });
@@ -23,9 +23,9 @@ const bodyFont = Karla({
 });
 
 export const metadata: Metadata = {
-  title: "practice.",
+  title: "The Log Book",
   description: "Track your daily music practice sessions",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "practice." },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "The Log Book" },
   formatDetection: { telephone: false },
 };
 

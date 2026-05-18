@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "practice.",
-    short_name: "practice.",
+    name: "The Log Book",
+    short_name: "The Log Book",
     description: "Track your daily music practice sessions",
     start_url: "/dashboard",
     display: "standalone",

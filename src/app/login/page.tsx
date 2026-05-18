@@ -18,10 +18,10 @@ export default async function LoginPage({ searchParams }: Props) {
           <div className="space-y-2 text-center">
             <h1 className="-rotate-1 inline-block font-display text-7xl"
               style={{ color: "var(--brand)" }}>
-              practice.
+              The Log Book
             </h1>
             <p className="text-base" style={{ color: "var(--fg-muted)" }}>
-              your music practice tracker
+              An opinionated music practice tracker
             </p>
           </div>
 

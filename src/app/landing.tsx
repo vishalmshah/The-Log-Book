@@ -51,7 +51,7 @@ export function LandingPage() {
         </h1>
 
         <p className="mt-3 text-xl font-medium" style={{ color: "var(--fg-primary)" }}>
-          An opinionated music practice application
+          An opinionated music practice tracker
         </p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

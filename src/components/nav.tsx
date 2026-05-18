@@ -36,8 +36,8 @@ export function NavBar() {
       {/* ── Desktop: left sidebar ── */}
       <nav className="fixed left-0 top-0 z-50 hidden h-full w-52 flex-col gap-1 border-r px-3 pt-5 md:flex"
         style={{ background: "var(--bg-content)", borderColor: "var(--border-color)" }}>
-        <p className="mb-4 px-3 font-display text-2xl -rotate-1" style={{ color: "var(--brand)" }}>
-          practice.
+        <p className="mb-4 px-3 font-display text-xl -rotate-1" style={{ color: "var(--brand)" }}>
+          The Log Book
         </p>
         {tabs.map(({ href, icon: Icon, label }) => {
           const active = pathname.startsWith(href);

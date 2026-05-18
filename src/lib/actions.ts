@@ -154,6 +154,61 @@ export async function saveWeekLog(weekNum: number, year: number, focusInfo: Reco
   revalidatePath("/week");
 }
 
+// ── CSV export ───────────────────────────────────────────────────────────────
+
+function csvCell(val: string | number | boolean | null | undefined): string {
+  if (val === null || val === undefined) return "";
+  const s = String(val);
+  return s.includes(",") || s.includes('"') || s.includes("\n")
+    ? `"${s.replace(/"/g, '""')}"`
+    : s;
+}
+
+function hmsToDurationMin(hms?: string | null): string {
+  if (!hms) return "";
+  const [h, m, s] = hms.split(":").map(Number);
+  return String(Math.round(((h || 0) * 3600 + (m || 0) * 60 + (s || 0)) / 6) / 10);
+}
+
+export async function exportSessionsCSV(): Promise<string> {
+  const { supabase, user } = await getUser();
+  const { data } = await supabase
+    .from("session_logs")
+    .select("date, todays_focus, week, year, completed, additional_notes, exercises_finished")
+    .eq("user_id", user.id)
+    .order("date", { ascending: true });
+
+  const headers = [
+    "date", "focus", "week", "year", "completed",
+    "duration_min", "mood_stars", "focus_stars", "notes",
+    "spine_exercises", "primary_exercises", "secondary_exercises",
+  ];
+
+  const rows = (data ?? []).map((s) => {
+    const an = s.additional_notes as Record<string, unknown> | null;
+    const ef = s.exercises_finished as Record<string, { exercise: string }[]> | null;
+    const joinEx = (arr?: { exercise: string }[]) =>
+      (arr ?? []).map((e) => e.exercise).join(";");
+
+    return [
+      csvCell(s.date),
+      csvCell(s.todays_focus),
+      csvCell(s.week),
+      csvCell(s.year),
+      csvCell(s.completed),
+      csvCell(hmsToDurationMin(an?.practice_duration as string | null)),
+      csvCell(an?.mood_stars as number | null),
+      csvCell(an?.focus_stars as number | null),
+      csvCell(an?.additional_notes as string | null),
+      csvCell(joinEx(ef?.spine)),
+      csvCell(joinEx(ef?.primary)),
+      csvCell(joinEx(ef?.secondary)),
+    ].join(",");
+  });
+
+  return [headers.join(","), ...rows].join("\n");
+}
+
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 export async function saveFocusNames(names: { focus1: string; focus2: string; focus3: string }) {

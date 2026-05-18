@@ -37,12 +37,9 @@ export function Header() {
       style={{ background: "color-mix(in srgb, var(--bg-content) 85%, transparent)", borderColor: "var(--border-color)" }}
     >
       <div className="flex flex-1 items-center justify-between">
-        {/* Left: app name in display font (desktop only — sidebar shows nav) */}
-        <span className="hidden font-display text-xl md:block" style={{ color: "var(--brand)" }}>
-          practice.
-        </span>
+        {/* Left: app name — mobile only (sidebar shows it on desktop) */}
         <span className="font-display text-xl md:hidden" style={{ color: "var(--brand)" }}>
-          practice.
+          The Log Book
         </span>
 
         {/* Center: page title */}

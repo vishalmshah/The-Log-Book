@@ -40,7 +40,7 @@ export function SiteFooter() {
         </p>
 
         <p className="font-display text-lg" style={{ color: "var(--brand)" }}>
-          practice. · est. 2026
+          The Log Book · est. 2026
         </p>
 
         <div className="flex items-center gap-3">

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { saveExercises, saveFocusNames, saveWeeklyLabels, signOut, deleteAccount, type ExerciseRow } from "@/lib/actions";
+import { saveExercises, saveFocusNames, saveWeeklyLabels, signOut, deleteAccount, exportSessionsCSV, type ExerciseRow } from "@/lib/actions";
 import { Trash2, Plus } from "lucide-react";
 
 // ── Shared debounce hook ──────────────────────────────────────────────────────
@@ -107,6 +107,23 @@ export function AccountPanel({ email }: { email: string }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isPendingLogout, startLogout] = useTransition();
   const [isPendingDelete, startDelete] = useTransition();
+  const [isExporting, setIsExporting] = useState(false);
+
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      const csv = await exportSessionsCSV();
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "practice_sessions.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -115,6 +132,9 @@ export function AccountPanel({ email }: { email: string }) {
       </p>
 
       <div className="flex flex-wrap gap-3">
+        <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+          {isExporting ? "Exporting…" : "Export data (CSV)"}
+        </Button>
         <Button variant="outline" onClick={() => setLogoutOpen(true)}>
           Log out
         </Button>
