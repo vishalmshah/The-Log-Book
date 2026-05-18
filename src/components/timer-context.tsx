@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
@@ -83,9 +84,10 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 export function FloatingTimer() {
   const { elapsed, running } = useTimer();
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
   useEffect(() => { setMounted(true); }, []);
 
-  if (!mounted || (elapsed === 0 && !running)) return null;
+  if (!mounted || (elapsed === 0 && !running) || pathname === "/" || pathname === "/login" || pathname.startsWith("/auth")) return null;
 
   const mins = Math.floor(elapsed / 60).toString().padStart(2, "0");
   const secs = (elapsed % 60).toString().padStart(2, "0");

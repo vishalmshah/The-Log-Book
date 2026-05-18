@@ -9,7 +9,7 @@ import { InfoDialog } from "@/components/info-dialog";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
-  "/week": "Set Weekly Focus",
+  "/week": "Start Week",
   "/log": "Log Session",
   "/settings": "Settings",
 };

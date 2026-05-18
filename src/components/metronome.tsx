@@ -141,7 +141,7 @@ export function Metronome() {
   }
 
   const pathname = usePathname();
-  if (!mounted || pathname === "/") return null;
+  if (!mounted || pathname === "/" || pathname === "/login" || pathname.startsWith("/auth")) return null;
 
   const beatUnitSymbol = beatUnit === 8 ? "♪" : "♩";
 
