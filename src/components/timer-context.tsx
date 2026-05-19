@@ -94,8 +94,9 @@ export function FloatingTimer() {
 
   return (
     <Link href="/log"
-      className="fixed top-14 right-4 z-50 flex items-center gap-2 rounded-full border px-4 py-2 shadow-md font-mono text-lg transition-transform hover:-translate-y-0.5"
+      className="fixed right-4 z-50 flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-md font-mono text-base md:px-4 md:py-2 md:text-lg transition-transform hover:-translate-y-0.5"
       style={{
+        top: "calc(3rem + env(safe-area-inset-top) + 0.5rem)",
         background: "var(--bg-content)",
         borderColor: "var(--border-color)",
         color: running ? "var(--brand)" : "var(--fg-muted)",

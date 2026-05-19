@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "mkdir -p .next/dev/server .next/dev/static/development .next/dev/cache/webpack/server-development .next/dev/cache/webpack/client-development .next/dev/cache/webpack/client-development-fallback && next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

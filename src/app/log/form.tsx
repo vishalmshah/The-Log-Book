@@ -43,7 +43,7 @@ function PracticeTimer({ readOnly }: { readOnly?: boolean }) {
       <input type="text" value={inputVal} readOnly={running || readOnly}
         onChange={(e) => setInputVal(e.target.value)} onBlur={handleBlur}
         onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-        className={`w-28 bg-transparent font-mono text-4xl font-semibold tabular-nums outline-none ${(running || readOnly) ? "cursor-default" : "cursor-text rounded border border-transparent focus:border-input focus:px-1"}`}
+        className={`w-36 bg-transparent font-mono text-4xl font-semibold tabular-nums outline-none ${(running || readOnly) ? "cursor-default" : "cursor-text rounded border border-transparent focus:border-input focus:px-1"}`}
       />
       {!readOnly && (
         <div className="flex gap-2">

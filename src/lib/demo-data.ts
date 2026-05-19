@@ -89,7 +89,7 @@ const RAW: [number, string, number, number, number][] = [
 export const DEMO_SESSIONS: Session[] = RAW.map(([daysBack, focus, mins, mood, focusStar]) => {
   const d = new Date();
   d.setDate(d.getDate() - daysBack);
-  const dateStr = d.toISOString().slice(0, 10);
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const { week, year } = getISOWeek(d);
   return {
     date: dateStr,

@@ -1,8 +1,6 @@
 const CACHE = "practice-v1";
-const SHELL = ["/dashboard", "/log", "/week", "/settings"];
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
