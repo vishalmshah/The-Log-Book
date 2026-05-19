@@ -22,7 +22,7 @@ interface Props {
 export function WeekForm({ initialDate, weekNum, year, labels, initialFocusInfo, weekStartLabel, todayStr, dayColors }: Props) {
   const router = useRouter();
   const [focusInfo, setFocusInfo] = useState(initialFocusInfo);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const focusInfoRef = useRef(focusInfo);
   focusInfoRef.current = focusInfo;
@@ -33,8 +33,13 @@ export function WeekForm({ initialDate, weekNum, year, labels, initialFocusInfo,
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSaveStatus("saving");
-      await saveWeekLog(weekNum, year, focusInfoRef.current);
-      setSaveStatus("saved");
+      try {
+        await saveWeekLog(weekNum, year, focusInfoRef.current);
+        setSaveStatus("saved");
+      } catch {
+        setSaveStatus("error");
+        setTimeout(() => setSaveStatus("idle"), 2000);
+      }
     }, 800);
     return () => clearTimeout(debounceRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,6 +69,7 @@ export function WeekForm({ initialDate, weekNum, year, labels, initialFocusInfo,
           <h2 className="text-base font-medium">This Week&apos;s Focus</h2>
           {saveStatus === "saving" && <span className="text-xs text-muted-foreground">Saving…</span>}
           {saveStatus === "saved" && <span className="text-xs text-muted-foreground">Saved</span>}
+          {saveStatus === "error" && <span className="text-xs text-destructive">Error saving</span>}
         </div>
         {activeLabels.map((label) => (
           <div key={label} className="space-y-1">

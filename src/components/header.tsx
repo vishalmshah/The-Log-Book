@@ -23,7 +23,9 @@ export function Header() {
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     if (pathname === "/" || pathname === "/login" || pathname.startsWith("/auth")) return;
-    getStreak().then(setStreak).catch(() => setStreak(null));
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    getStreak(todayStr).then(setStreak).catch(() => setStreak(null));
   }, [pathname]);
 
   const title = TITLES[pathname] ?? "";

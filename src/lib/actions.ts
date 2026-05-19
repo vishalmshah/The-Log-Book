@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase";
 import { getISOWeek } from "@/lib/week";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 async function getUser() {
   const supabase = await createServerClient();
@@ -14,7 +15,7 @@ async function getUser() {
 
 // ── Streak ───────────────────────────────────────────────────────────────────
 
-export async function getStreak(): Promise<number> {
+export async function getStreak(todayStr?: string): Promise<number> {
   const { supabase, user } = await getUser();
   const { data } = await supabase
     .from("session_logs")
@@ -27,12 +28,12 @@ export async function getStreak(): Promise<number> {
     (data ?? []).filter((r) => r.todays_focus !== "Free" && r.todays_focus !== "Skipped").map((r) => r.date as string)
   );
 
-  const today = new Date();
+  const today = todayStr ? new Date(todayStr + "T12:00:00") : new Date();
   let streak = 0;
   for (let i = 0; i <= 90; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     if (practiced.has(key)) {
       streak++;
     } else if (i > 0) {
@@ -59,14 +60,14 @@ export async function deleteAccount() {
 
 export async function sendMagicLink(formData: FormData) {
   const email = formData.get("email") as string;
+  const host = (await headers()).get("host") ?? "thelogbook.studio";
+  const origin = `${host.includes("localhost") ? "http" : "https"}://${host}`;
   const supabase = await createServerClient();
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`,
-    },
+    options: { emailRedirectTo: `${origin}/auth/callback` },
   });
-  if (error) redirect("/login?error=Could+not+send+magic+link");
+  if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
   redirect("/login?message=Check+your+email+for+the+login+link");
 }
 

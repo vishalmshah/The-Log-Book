@@ -1,0 +1,17 @@
+diff --git a/node_modules/next/dist/lib/fs/write-atomic.js b/node_modules/next/dist/lib/fs/write-atomic.js
+index aa24697..f176ba4 100644
+--- a/node_modules/next/dist/lib/fs/write-atomic.js
++++ b/node_modules/next/dist/lib/fs/write-atomic.js
+@@ -9,10 +9,12 @@ Object.defineProperty(exports, "writeFileAtomic", {
+     }
+ });
+ const _fs = require("fs");
++const _path = require("path");
+ const _rename = require("./rename");
+ function writeFileAtomic(filePath, content) {
+     const tempPath = filePath + '.tmp.' + Math.random().toString(36).slice(2);
+     try {
++        (0, _fs.mkdirSync)((0, _path.dirname)(tempPath), { recursive: true });
+         (0, _fs.writeFileSync)(tempPath, content, 'utf-8');
+         (0, _rename.renameSync)(tempPath, filePath);
+     } catch (e) {

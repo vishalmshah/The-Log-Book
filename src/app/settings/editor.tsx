@@ -11,7 +11,7 @@ import { Trash2, Plus } from "lucide-react";
 
 // ── Shared debounce hook ──────────────────────────────────────────────────────
 
-type SaveStatus = "idle" | "saving" | "saved";
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 function useDebounce(fn: () => Promise<void>, delay = 800) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -21,8 +21,13 @@ function useDebounce(fn: () => Promise<void>, delay = 800) {
     setStatus("saving");
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
-      await fn();
-      setStatus("saved");
+      try {
+        await fn();
+        setStatus("saved");
+      } catch {
+        setStatus("error");
+        setTimeout(() => setStatus("idle"), 2000);
+      }
     }, delay);
   }
 
@@ -31,6 +36,7 @@ function useDebounce(fn: () => Promise<void>, delay = 800) {
 
 function SaveStatus({ status }: { status: SaveStatus }) {
   if (status === "idle") return null;
+  if (status === "error") return <span className="text-xs text-destructive">Error saving</span>;
   return (
     <span className="text-xs text-muted-foreground">
       {status === "saving" ? "Saving…" : "Saved"}
@@ -111,14 +117,18 @@ export function AccountPanel({ email }: { email: string }) {
 
   function handleExport() {
     startExport(async () => {
-      const csv = await exportSessionsCSV();
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "practice_sessions.csv";
-      a.click();
-      URL.revokeObjectURL(url);
+      try {
+        const csv = await exportSessionsCSV();
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "practice_sessions.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        alert("Export failed. Please try again.");
+      }
     });
   }
 

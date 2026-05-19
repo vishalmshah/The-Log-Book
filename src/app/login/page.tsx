@@ -1,5 +1,6 @@
 import { sendMagicLink } from "@/lib/actions";
 import { SiteFooter } from "@/components/site-footer";
+import { SubmitButton } from "./submit-button";
 
 interface Props {
   searchParams: Promise<{ message?: string; error?: string }>;
@@ -49,13 +50,7 @@ export default async function LoginPage({ searchParams }: Props) {
                   color: "var(--fg-primary)",
                 }}
               />
-              <button
-                type="submit"
-                className="w-full rounded-md px-4 py-2.5 text-sm font-medium transition-transform hover:-translate-y-0.5"
-                style={{ background: "var(--brand)", color: "#fff" }}
-              >
-                Send magic link
-              </button>
+              <SubmitButton />
             </form>
 
             {message && <p className="text-center text-sm" style={{ color: "var(--fg-muted)" }}>{message}</p>}

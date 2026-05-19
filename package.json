@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "mkdir -p .next/dev/server .next/dev/static/development .next/dev/cache/webpack/server-development .next/dev/cache/webpack/client-development .next/dev/cache/webpack/client-development-fallback && next dev --webpack",
+    "dev": "rm -rf .next/dev && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -33,6 +34,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^4",
     "typescript": "^5.9.3"
   }

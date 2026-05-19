@@ -81,7 +81,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
 // ── Floating timer badge ──────────────────────────────────────────────────────
 
-export function FloatingTimer() {
+export function FloatingTimer({ metronomeCollapsed = true }: { metronomeCollapsed?: boolean }) {
   const { elapsed, running } = useTimer();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
@@ -92,11 +92,16 @@ export function FloatingTimer() {
   const mins = Math.floor(elapsed / 60).toString().padStart(2, "0");
   const secs = (elapsed % 60).toString().padStart(2, "0");
 
+  // When metronome is expanded (~380px panel), shift timer up to stay above it
+  const expandOffset = metronomeCollapsed ? 0 : 380;
+
   return (
     <Link href="/log"
-      className="fixed right-4 z-50 flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-md font-mono text-base md:px-4 md:py-2 md:text-lg transition-transform hover:-translate-y-0.5"
+      className={`fixed right-4 z-50 flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-md font-mono text-base md:px-4 md:py-2 md:text-lg transition-[bottom] duration-200 hover:-translate-y-0.5 ${
+        metronomeCollapsed ? "md:!bottom-20" : "md:!bottom-[460px]"
+      }`}
       style={{
-        top: "calc(3rem + env(safe-area-inset-top) + 0.5rem)",
+        bottom: `calc(8.5rem + ${expandOffset}px + env(safe-area-inset-bottom))`,
         background: "var(--bg-content)",
         borderColor: "var(--border-color)",
         color: running ? "var(--brand)" : "var(--fg-muted)",

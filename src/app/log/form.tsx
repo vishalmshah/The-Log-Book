@@ -210,7 +210,7 @@ function HistoryDialog({ exercise, open, onClose }: { exercise: string; open: bo
   useEffect(() => {
     if (!open || !exercise) return;
     setLoading(true);
-    getExerciseHistory(exercise).then(setHistory).finally(() => setLoading(false));
+    getExerciseHistory(exercise).then(setHistory).catch(() => setHistory([])).finally(() => setLoading(false));
   }, [open, exercise]);
 
   return (
@@ -423,13 +423,17 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
     autoSaveTimerRef.current = setTimeout(async () => {
       if (completedRef.current) return;
       const todaysFocus = second ? `${primary} + ${second}` : primary;
-      await saveSession({
-        date: initialDate, todaysFocus,
-        spineEntries, primaryEntries, secondaryEntries,
-        moodStars, focusStars, additionalNotes,
-        practiceDuration: secondsToDuration(elapsedRef.current),
-        completed: false,
-      });
+      try {
+        await saveSession({
+          date: initialDate, todaysFocus,
+          spineEntries, primaryEntries, secondaryEntries,
+          moodStars, focusStars, additionalNotes,
+          practiceDuration: secondsToDuration(elapsedRef.current),
+          completed: false,
+        });
+      } catch {
+        // auto-save failure is silent — the user can still manually save
+      }
     }, 2000);
     return () => clearTimeout(autoSaveTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -451,14 +455,18 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
   function handleSave() {
     const todaysFocus = second ? `${primary} + ${second}` : primary;
     startTransition(async () => {
-      await saveSession({
-        date: initialDate, todaysFocus,
-        spineEntries, primaryEntries, secondaryEntries,
-        moodStars, focusStars, additionalNotes,
-        practiceDuration: secondsToDuration(elapsed),
-        completed: true,
-      });
-      setCompleted(true);
+      try {
+        await saveSession({
+          date: initialDate, todaysFocus,
+          spineEntries, primaryEntries, secondaryEntries,
+          moodStars, focusStars, additionalNotes,
+          practiceDuration: secondsToDuration(elapsed),
+          completed: true,
+        });
+        setCompleted(true);
+      } catch {
+        alert("Failed to save session. Please check your connection and try again.");
+      }
     });
   }
 

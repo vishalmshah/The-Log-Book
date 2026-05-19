@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Karla } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { TimerProvider, FloatingTimer } from "@/components/timer-context";
-import { Metronome } from "@/components/metronome";
+import { TimerProvider } from "@/components/timer-context";
+import { BottomWidgets } from "@/components/bottom-widgets";
 import { NavBar } from "@/components/nav";
 import { Header } from "@/components/header";
 import { SWRegister } from "@/components/sw-register";
@@ -55,8 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {children}
               </main>
             </AppShell>
-            <FloatingTimer />
-            <Metronome />
+            <BottomWidgets />
           </ThemeProvider>
         </TimerProvider>
       </body>

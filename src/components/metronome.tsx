@@ -7,9 +7,16 @@ import { ChevronUp } from "lucide-react";
 const LOOKAHEAD_MS = 25;
 const SCHEDULE_AHEAD_S = 0.1;
 
-export function Metronome() {
+export function Metronome({ onCollapseChange }: { onCollapseChange?: (collapsed: boolean) => void }) {
   const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
+
+  // Notify parent when collapsed state changes (skip initial mount)
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    onCollapseChange?.(collapsed);
+  }, [collapsed, onCollapseChange]);
   const [running, setRunning] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(-1);
 

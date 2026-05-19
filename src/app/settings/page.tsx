@@ -24,7 +24,7 @@ export default async function SettingsPage() {
       };
     }
 
-    await supabase.from("user_info").insert({
+    const { error: insertError } = await supabase.from("user_info").insert({
       user_id: user.id,
       spine: cat("Spine", [
         { ex: "Technique warmup",  focused: true,  note: "Rote speed exercise with metronome — clean before fast" },
@@ -58,6 +58,7 @@ export default async function SettingsPage() {
       ]),
       weekly_focus: { weekly_A: "Song", weekly_B: "Key", weekly_C: "" },
     });
+    if (insertError) redirect("/login?error=Failed+to+initialize+account");
     redirect("/settings");
   }
 
