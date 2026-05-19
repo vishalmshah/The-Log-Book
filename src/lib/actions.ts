@@ -60,7 +60,8 @@ export async function deleteAccount() {
 
 export async function sendMagicLink(formData: FormData) {
   const email = formData.get("email") as string;
-  const host = (await headers()).get("host") ?? "thelogbook.studio";
+  const reqHeaders = await headers();
+  const host = reqHeaders.get("x-forwarded-host") ?? reqHeaders.get("host") ?? "thelogbook.studio";
   const origin = `${host.includes("localhost") ? "http" : "https"}://${host}`;
   const supabase = await createServerClient();
   const { error } = await supabase.auth.signInWithOtp({
