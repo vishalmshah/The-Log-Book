@@ -18,7 +18,7 @@ export default async function DashboardPage() {
       .order("date", { ascending: false }),
     supabase
       .from("user_info")
-      .select("focus_1, focus_2, focus_3")
+      .select("focus_1, focus_2, focus_3, weekly_goal_hours")
       .eq("user_id", user.id)
       .single(),
   ]);
@@ -50,7 +50,12 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <DashboardClient sessions={sessions ?? []} focusNames={focusNames} focusColorMap={focusColorMap} />
+        <DashboardClient
+          sessions={sessions ?? []}
+          focusNames={focusNames}
+          focusColorMap={focusColorMap}
+          goalHours={config?.weekly_goal_hours ?? 3}
+        />
       </div>
     </PageContainer>
   );

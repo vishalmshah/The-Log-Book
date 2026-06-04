@@ -2,7 +2,7 @@ import { createServerClient } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ExerciseEditor, FocusNamesForm, WeeklyLabelsForm, AccountPanel } from "./editor";
+import { ExerciseEditor, FocusNamesForm, WeeklyLabelsForm, WeeklyGoalForm, AccountPanel } from "./editor";
 import { PageContainer } from "@/components/page-container";
 
 export default async function SettingsPage() {
@@ -57,6 +57,7 @@ export default async function SettingsPage() {
         { ex: "Improvise then transcribe",focused: false,note: "" },
       ]),
       weekly_focus: { weekly_A: "Song", weekly_B: "Key", weekly_C: "" },
+      weekly_goal_hours: 3,
     });
     if (insertError) redirect("/login?error=Failed+to+initialize+account");
     redirect("/settings");
@@ -95,6 +96,11 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader><CardTitle>Weekly Focus Areas</CardTitle><CardDescription>Category names for your weekly planning (e.g. "Technique", "Theory").</CardDescription></CardHeader>
         <CardContent><WeeklyLabelsForm initial={weekly_focus} /></CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Weekly Practice Goal</CardTitle><CardDescription>Hours of practice per week to complete your ring.</CardDescription></CardHeader>
+        <CardContent><WeeklyGoalForm initial={config.weekly_goal_hours ?? 3} /></CardContent>
       </Card>
 
       <Separator />

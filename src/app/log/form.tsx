@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Star, X, Plus, Clock, Mic, Square } from "lucide-react";
 import { saveSession, deleteSession, getExerciseHistory, type ExerciseEntry } from "@/lib/actions";
 import { WeekStrip } from "@/components/week-strip";
@@ -171,17 +172,33 @@ function secondsToDuration(total: number) {
     .map((v) => v.toString().padStart(2, "0")).join(":");
 }
 
-function initSpineEntries(focusEx: string[], ef: Record<string, unknown>): ExerciseEntry[] {
+type SpineRow = ExerciseEntry & { checked: boolean };
+
+function initSpineEntries(focusEx: string[], ef: Record<string, unknown>): SpineRow[] {
   const saved = (ef?.spine ?? []) as ExerciseEntry[];
   return focusEx.map((ex) => {
     const match = saved.find((e) => e.exercise === ex);
-    return { exercise: ex, sessionNotes: match?.sessionNotes ?? "", audioUrl: match?.audioUrl };
+    return {
+      exercise: ex,
+      sessionNotes: match?.sessionNotes ?? "",
+      audioUrl: match?.audioUrl,
+      checked: !!match,
+    };
   });
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ExerciseCategory { name: string; focus_ex: string[]; notes: string[]; }
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+function SaveIndicator({ status }: { status?: SaveStatus }) {
+  if (!status || status === "idle") return null;
+  const text = status === "saving" ? "Saving…" : status === "saved" ? "Saved" : "Error saving";
+  const color = status === "error" ? "text-destructive" : "text-muted-foreground";
+  return <span className={`text-xs ${color}`}>{text}</span>;
+}
 interface WeeklyFocusEntry { label: string; notes: string; }
 interface ExistingSession {
   todays_focus: string;
@@ -250,7 +267,7 @@ function HistoryDialog({ exercise, open, onClose }: { exercise: string; open: bo
 function ExerciseRow({
   exercise, settingsNote, sessionNotes, onSessionNotesChange,
   availableExercises, onExerciseChange, onRemove, readOnly,
-  date, audioUrl, onAudioSaved,
+  date, audioUrl, onAudioSaved, checked, onCheckedChange, saveStatus,
 }: {
   exercise: string;
   settingsNote: string;
@@ -263,6 +280,9 @@ function ExerciseRow({
   date: string;
   audioUrl?: string;
   onAudioSaved?: (url: string) => void;
+  checked?: boolean;
+  onCheckedChange?: (v: boolean) => void;
+  saveStatus?: SaveStatus;
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const slug = exercise.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -270,6 +290,14 @@ function ExerciseRow({
   return (
     <div className="space-y-2 rounded-lg border border-border p-3">
       <div className="flex items-center gap-2">
+        {checked !== undefined && (
+          <Checkbox
+            checked={checked}
+            onCheckedChange={(v) => onCheckedChange?.(!!v)}
+            disabled={readOnly}
+            aria-label={`Mark ${exercise} as done`}
+          />
+        )}
         {(!readOnly && availableExercises) ? (
           <Select value={exercise} onValueChange={(v) => { if (v) onExerciseChange?.(v); }}>
             <SelectTrigger className="h-8 flex-1 text-sm"><SelectValue /></SelectTrigger>
@@ -280,6 +308,7 @@ function ExerciseRow({
         ) : (
           <span className="flex-1 text-sm font-medium">{exercise}</span>
         )}
+        {!readOnly && <SaveIndicator status={saveStatus} />}
         <button type="button" onClick={() => setHistoryOpen(true)}
           className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
           title="View past notes">
@@ -318,13 +347,19 @@ function ExerciseRow({
 
 // ── Focus section (add-on-demand) ─────────────────────────────────────────────
 
-function FocusSection({ category, entries, onChange, readOnly, date }: {
+const JUST_HAVE_FUN = "Have fun!";
+
+function FocusSection({ category, entries, onChange, readOnly, date, saveStatus }: {
   category: ExerciseCategory;
   entries: ExerciseEntry[];
   onChange: (entries: ExerciseEntry[]) => void;
   readOnly?: boolean;
   date: string;
+  saveStatus?: SaveStatus;
 }) {
+  const effectiveFocusEx = category.focus_ex.includes(JUST_HAVE_FUN)
+    ? category.focus_ex
+    : [...category.focus_ex, JUST_HAVE_FUN];
   const noteByEx = Object.fromEntries(category.focus_ex.map((ex, i) => [ex, category.notes[i] ?? ""]));
 
   function addedByOthers(currentIdx: number) {
@@ -333,23 +368,20 @@ function FocusSection({ category, entries, onChange, readOnly, date }: {
 
   function availableForRow(i: number) {
     const others = addedByOthers(i);
-    return category.focus_ex.filter((ex) => !others.has(ex));
+    return effectiveFocusEx.filter((ex) => !others.has(ex));
   }
 
   const totalAdded = new Set(entries.map((e) => e.exercise));
-  const canAdd = category.focus_ex.some((ex) => !totalAdded.has(ex));
+  const canAdd = effectiveFocusEx.some((ex) => !totalAdded.has(ex));
 
   function addExercise() {
-    const next = category.focus_ex.find((ex) => !totalAdded.has(ex));
+    const next = effectiveFocusEx.find((ex) => !totalAdded.has(ex));
     if (next) onChange([...entries, { exercise: next, sessionNotes: "" }]);
   }
 
   function update(i: number, patch: Partial<ExerciseEntry>) {
     onChange(entries.map((e, j) => j === i ? { ...e, ...patch } : e));
   }
-
-  if (category.focus_ex.length === 0)
-    return <p className="text-sm text-muted-foreground">No exercises configured for this focus yet.</p>;
 
   return (
     <div className="space-y-3">
@@ -366,6 +398,7 @@ function FocusSection({ category, entries, onChange, readOnly, date }: {
           date={date}
           audioUrl={entry.audioUrl}
           onAudioSaved={(url) => update(i, { audioUrl: url })}
+          saveStatus={saveStatus}
         />
       ))}
       {!readOnly && canAdd && (
@@ -384,6 +417,8 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [weekPromptOpen, setWeekPromptOpen] = useState(showWeeklyPrompt);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const isFirstAutoSave = useRef(true);
   const ef = (existing?.exercises_finished ?? {}) as Record<string, unknown>;
 
   const savedFocuses = existing?.todays_focus?.split(" + ") ?? [];
@@ -393,7 +428,7 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
   const [primary, setPrimary] = useState(initPrimary);
   const [second, setSecond] = useState<string | null>(initSecond);
 
-  const [spineEntries, setSpineEntries] = useState<ExerciseEntry[]>(() => initSpineEntries(spine.focus_ex, ef));
+  const [spineEntries, setSpineEntries] = useState<SpineRow[]>(() => initSpineEntries(spine.focus_ex, ef));
   const [primaryEntries, setPrimaryEntries] = useState<ExerciseEntry[]>(() => (ef?.primary ?? []) as ExerciseEntry[]);
   const [secondaryEntries, setSecondaryEntries] = useState<ExerciseEntry[]>(() => (ef?.secondary ?? []) as ExerciseEntry[]);
 
@@ -419,6 +454,12 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     if (!practiceStarted) return;
+    if (isFirstAutoSave.current) {
+      isFirstAutoSave.current = false;
+      return;
+    }
+    if (completedRef.current) return;
+    setSaveStatus("saving");
     clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(async () => {
       if (completedRef.current) return;
@@ -426,13 +467,18 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
       try {
         await saveSession({
           date: initialDate, todaysFocus,
-          spineEntries, primaryEntries, secondaryEntries,
+          spineEntries: spineEntries
+            .filter((e) => e.checked)
+            .map((e) => ({ exercise: e.exercise, sessionNotes: e.sessionNotes, audioUrl: e.audioUrl })),
+          primaryEntries, secondaryEntries,
           moodStars, focusStars, additionalNotes,
           practiceDuration: secondsToDuration(elapsedRef.current),
           completed: false,
         });
+        setSaveStatus("saved");
       } catch {
-        // auto-save failure is silent — the user can still manually save
+        setSaveStatus("error");
+        setTimeout(() => setSaveStatus("idle"), 2000);
       }
     }, 2000);
     return () => clearTimeout(autoSaveTimerRef.current);
@@ -455,17 +501,24 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
   function handleSave() {
     const todaysFocus = second ? `${primary} + ${second}` : primary;
     stopTimer();
+    setSaveStatus("saving");
     startTransition(async () => {
       try {
         await saveSession({
           date: initialDate, todaysFocus,
-          spineEntries, primaryEntries, secondaryEntries,
+          spineEntries: spineEntries
+            .filter((e) => e.checked)
+            .map((e) => ({ exercise: e.exercise, sessionNotes: e.sessionNotes, audioUrl: e.audioUrl })),
+          primaryEntries, secondaryEntries,
           moodStars, focusStars, additionalNotes,
           practiceDuration: secondsToDuration(elapsed),
           completed: true,
         });
+        setSaveStatus("saved");
         setCompleted(true);
       } catch {
+        setSaveStatus("error");
+        setTimeout(() => setSaveStatus("idle"), 2000);
         alert("Failed to save session. Please check your connection and try again.");
       }
     });
@@ -613,11 +666,18 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
                   exercise={entry.exercise}
                   settingsNote={spine.notes[spine.focus_ex.indexOf(entry.exercise)] ?? ""}
                   sessionNotes={entry.sessionNotes}
-                  onSessionNotesChange={(v) => setSpineEntries((prev) => prev.map((e, j) => j === i ? { ...e, sessionNotes: v } : e))}
+                  onSessionNotesChange={(v) => setSpineEntries((prev) => prev.map((e, j) =>
+                    j === i
+                      ? { ...e, sessionNotes: v, checked: e.checked || (e.sessionNotes === "" && v !== "") }
+                      : e
+                  ))}
                   readOnly={completed}
                   date={initialDate}
                   audioUrl={entry.audioUrl}
                   onAudioSaved={(url) => setSpineEntries((prev) => prev.map((e, j) => j === i ? { ...e, audioUrl: url } : e))}
+                  checked={entry.checked}
+                  onCheckedChange={(v) => setSpineEntries((prev) => prev.map((e, j) => j === i ? { ...e, checked: v } : e))}
+                  saveStatus={saveStatus}
                 />
               ))
             )}
@@ -631,7 +691,7 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
           ) : primaryCategory ? (
             <div className="space-y-3">
               <h2 className="text-base font-semibold">{primary}</h2>
-              <FocusSection category={primaryCategory} entries={primaryEntries} onChange={setPrimaryEntries} readOnly={completed} date={initialDate} />
+              <FocusSection category={primaryCategory} entries={primaryEntries} onChange={setPrimaryEntries} readOnly={completed} date={initialDate} saveStatus={saveStatus} />
             </div>
           ) : null}
 
@@ -641,7 +701,7 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
               <Separator />
               <div className="space-y-3">
                 <h2 className="text-base font-semibold">{second}</h2>
-                <FocusSection category={secondCategory} entries={secondaryEntries} onChange={setSecondaryEntries} readOnly={completed} date={initialDate} />
+                <FocusSection category={secondCategory} entries={secondaryEntries} onChange={setSecondaryEntries} readOnly={completed} date={initialDate} saveStatus={saveStatus} />
               </div>
             </>
           )}

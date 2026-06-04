@@ -50,7 +50,12 @@ export function Header() {
         {/* Right: streak + info + theme toggle */}
         <div className="flex items-center gap-3">
           {streak !== null && streak > 0 && (
-            <span className="text-sm font-medium">🔥 {streak}</span>
+            <span
+              className="text-sm font-medium"
+              title={`${streak} week${streak === 1 ? "" : "s"} in a row`}
+            >
+              🔥 {streak}w
+            </span>
           )}
           {mounted && <InfoDialog />}
           {mounted && (

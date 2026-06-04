@@ -6,8 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { saveExercises, saveFocusNames, saveWeeklyLabels, signOut, deleteAccount, exportSessionsCSV, type ExerciseRow } from "@/lib/actions";
-import { Trash2, Plus } from "lucide-react";
+import { saveExercises, saveFocusNames, saveWeeklyLabels, saveWeeklyGoal, signOut, deleteAccount, exportSessionsCSV, type ExerciseRow } from "@/lib/actions";
+import { Trash2, Plus, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ── Shared debounce hook ──────────────────────────────────────────────────────
 
@@ -101,6 +119,39 @@ export function WeeklyLabelsForm({ initial }: WeeklyLabelsProps) {
           <Input id={field} value={labels[field]} onChange={(e) => handleChange(field, e.target.value)} />
         </div>
       ))}
+      <SaveStatus status={status} />
+    </div>
+  );
+}
+
+// ── Weekly goal ───────────────────────────────────────────────────────────────
+
+export function WeeklyGoalForm({ initial }: { initial: number }) {
+  const [hours, setHours] = useState(initial);
+  const hoursRef = useRef(hours);
+  hoursRef.current = hours;
+
+  const { trigger, status } = useDebounce(() => saveWeeklyGoal(hoursRef.current));
+
+  function handleChange(value: string) {
+    const h = Math.max(0, Number(value) || 0);
+    setHours(h);
+    trigger();
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <Label htmlFor="weekly-goal">Hours per week</Label>
+        <Input
+          id="weekly-goal"
+          type="number"
+          step="0.5"
+          min="0"
+          value={hours}
+          onChange={(e) => handleChange(e.target.value)}
+        />
+      </div>
       <SaveStatus status={status} />
     </div>
   );
@@ -203,9 +254,50 @@ interface Category {
   notes: string[];
 }
 
+type RowWithUid = ExerciseRow & { _uid: string };
+
+function SortableExerciseRow({
+  row,
+  onChange,
+  onRemove,
+}: {
+  row: RowWithUid;
+  onChange: (patch: Partial<ExerciseRow>) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row._uid });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}
+      className="grid grid-cols-[1.25rem_2rem_1fr_1fr_2rem] items-center gap-2">
+      <button type="button" {...attributes} {...listeners}
+        className="flex cursor-grab touch-none items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        aria-label="Reorder exercise">
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <Checkbox checked={row.focused} onCheckedChange={(v) => onChange({ focused: !!v })} />
+      <Input value={row.ex} onChange={(e) => onChange({ ex: e.target.value })} placeholder="Exercise name" />
+      <Input value={row.note} onChange={(e) => onChange({ note: e.target.value })} placeholder="Note" />
+      <button type="button" onClick={onRemove}
+        className="flex items-center justify-center text-muted-foreground hover:text-destructive">
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 export function ExerciseEditor({ category, fieldName }: { category: Category; fieldName: string }) {
-  const [rows, setRows] = useState<ExerciseRow[]>(() =>
-    category.all_ex.map((ex, i) => ({ ex, focused: category.focus_bool[i] ?? false, note: category.notes[i] ?? "" }))
+  const [rows, setRows] = useState<RowWithUid[]>(() =>
+    category.all_ex.map((ex, i) => ({
+      ex,
+      focused: category.focus_bool[i] ?? false,
+      note: category.notes[i] ?? "",
+      _uid: crypto.randomUUID(),
+    }))
   );
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
@@ -214,13 +306,18 @@ export function ExerciseEditor({ category, fieldName }: { category: Category; fi
     saveExercises(fieldName, category.name, rowsRef.current)
   );
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   function update(i: number, patch: Partial<ExerciseRow>) {
     setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)));
     trigger();
   }
 
   function addRow() {
-    setRows((prev) => [...prev, { ex: "", focused: false, note: "" }]);
+    setRows((prev) => [...prev, { ex: "", focused: false, note: "", _uid: crypto.randomUUID() }]);
     trigger();
   }
 
@@ -229,22 +326,40 @@ export function ExerciseEditor({ category, fieldName }: { category: Category; fi
     trigger();
   }
 
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setRows((prev) => {
+      const oldIndex = prev.findIndex((r) => r._uid === active.id);
+      const newIndex = prev.findIndex((r) => r._uid === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+    trigger();
+  }
+
   return (
     <div className="space-y-2">
-      <div className="hidden grid-cols-[2rem_1fr_1fr_2rem] gap-2 px-1 text-xs text-muted-foreground sm:grid">
-        <span>On</span><span>Exercise</span><span>Note</span><span />
+      <div className="hidden grid-cols-[1.25rem_2rem_1fr_1fr_2rem] gap-2 px-1 text-xs text-muted-foreground sm:grid">
+        <span /><span>On</span><span>Exercise</span><span>Note</span><span />
       </div>
-      {rows.map((row, i) => (
-        <div key={i} className="grid grid-cols-[2rem_1fr_1fr_2rem] items-center gap-2">
-          <Checkbox checked={row.focused} onCheckedChange={(v) => update(i, { focused: !!v })} />
-          <Input value={row.ex} onChange={(e) => update(i, { ex: e.target.value })} placeholder="Exercise name" />
-          <Input value={row.note} onChange={(e) => update(i, { note: e.target.value })} placeholder="Note" />
-          <button type="button" onClick={() => removeRow(i)}
-            className="flex items-center justify-center text-muted-foreground hover:text-destructive">
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      ))}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={rows.map((r) => r._uid)} strategy={verticalListSortingStrategy}>
+          {rows.map((row, i) => (
+            <SortableExerciseRow
+              key={row._uid}
+              row={row}
+              onChange={(patch) => update(i, patch)}
+              onRemove={() => removeRow(i)}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
       <div className="flex items-center justify-between pt-1">
         <button type="button" onClick={addRow}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">

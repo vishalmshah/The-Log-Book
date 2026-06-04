@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getISOWeek, formatDateParam } from "@/lib/week";
 import { buildDayColors } from "@/lib/focus-colors";
 import { MonthCalendar, WeeklyStackedChart } from "./charts";
+import { PracticeRing } from "./practice-ring";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ function parseMins(hms?: string | null): number {
   return Math.round(((h || 0) * 3600 + (m || 0) * 60 + (s || 0)) / 60);
 }
 
-function formatDuration(mins: number): string {
+export function formatDuration(mins: number): string {
   if (mins === 0) return "—";
   if (mins < 60) return `${mins}m`;
   const h = Math.floor(mins / 60);
@@ -65,10 +66,12 @@ export function DashboardClient({
   sessions,
   focusNames,
   focusColorMap,
+  goalHours,
 }: {
   sessions: Session[];
   focusNames: string[];
   focusColorMap: Record<string, string>;
+  goalHours: number;
 }) {
   const router = useRouter();
   const [period, setPeriod] = useState<Period>("week");
@@ -133,6 +136,17 @@ export function DashboardClient({
     () => filteredSessions.reduce((sum, s) => sum + parseMins(s.additional_notes?.practice_duration), 0),
     [filteredSessions]
   );
+
+  const effectiveGoalHours = useMemo(() => {
+    if (period === "week") return goalHours;
+    if (period === "month") {
+      const m = referenceDate.getMonth();
+      const y = referenceDate.getFullYear();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      return goalHours * (daysInMonth / 7);
+    }
+    return 0;
+  }, [period, referenceDate, goalHours]);
 
   const sessionList = useMemo(
     () => (period === "alltime" ? allLogged : filterByPeriod(allLogged)).slice(0, 10),
@@ -209,6 +223,13 @@ export function DashboardClient({
           </button>
         ))}
       </div>
+
+      {/* Practice ring — only shown for bounded periods */}
+      {period !== "alltime" && (
+        <div className="flex justify-center py-2">
+          <PracticeRing hours={totalMins / 60} goalHours={effectiveGoalHours} />
+        </div>
+      )}
 
       {/* ── Week view ─────────────────────────────────────────────────────────── */}
       {period === "week" && (

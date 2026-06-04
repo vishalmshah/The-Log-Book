@@ -17,28 +17,47 @@ async function getUser() {
 
 export async function getStreak(todayStr?: string): Promise<number> {
   const { supabase, user } = await getUser();
-  const { data } = await supabase
-    .from("session_logs")
-    .select("date, todays_focus")
-    .eq("user_id", user.id)
-    .order("date", { ascending: false })
-    .limit(90);
-
-  const practiced = new Set(
-    (data ?? []).filter((r) => r.todays_focus !== "Free" && r.todays_focus !== "Skipped").map((r) => r.date as string)
-  );
 
   const today = todayStr ? new Date(todayStr + "T12:00:00") : new Date();
+  const earliest = new Date(today);
+  earliest.setDate(earliest.getDate() - 90 * 7);
+  const earliestStr = `${earliest.getFullYear()}-${String(earliest.getMonth() + 1).padStart(2, "0")}-${String(earliest.getDate()).padStart(2, "0")}`;
+
+  const [{ data: cfg }, { data: sessions }] = await Promise.all([
+    supabase.from("user_info").select("weekly_goal_hours").eq("user_id", user.id).single(),
+    supabase
+      .from("session_logs")
+      .select("week, year, todays_focus, additional_notes")
+      .eq("user_id", user.id)
+      .gte("date", earliestStr),
+  ]);
+
+  const goalMins = (cfg?.weekly_goal_hours ?? 3) * 60;
+
+  const byWeek = new Map<string, number>();
+  for (const s of sessions ?? []) {
+    if (s.todays_focus === "Free" || s.todays_focus === "Skipped") continue;
+    const an = s.additional_notes as { practice_duration?: string } | null;
+    const hms = an?.practice_duration;
+    if (!hms) continue;
+    const [h, m, sec] = hms.split(":").map(Number);
+    const mins = ((h || 0) * 3600 + (m || 0) * 60 + (sec || 0)) / 60;
+    const key = `${s.year}-${String(s.week).padStart(2, "0")}`;
+    byWeek.set(key, (byWeek.get(key) ?? 0) + mins);
+  }
+
   let streak = 0;
+  const cursor = new Date(today);
   for (let i = 0; i <= 90; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    if (practiced.has(key)) {
+    const { week, year } = getISOWeek(cursor);
+    const key = `${year}-${String(week).padStart(2, "0")}`;
+    const mins = byWeek.get(key) ?? 0;
+    if (mins >= goalMins) {
       streak++;
     } else if (i > 0) {
-      break; // allow today to be not-yet-practiced without breaking streak
+      break; // allow current week to be not-yet-complete without breaking streak
     }
+    cursor.setDate(cursor.getDate() - 7);
   }
   return streak;
 }
@@ -282,4 +301,14 @@ export async function saveWeeklyLabels(labels: { weekly_A: string; weekly_B: str
     { onConflict: "user_id" }
   );
   revalidatePath("/settings");
+}
+
+export async function saveWeeklyGoal(hours: number) {
+  const { supabase, user } = await getUser();
+  await supabase
+    .from("user_info")
+    .update({ weekly_goal_hours: hours })
+    .eq("user_id", user.id);
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
 }

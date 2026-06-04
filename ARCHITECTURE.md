@@ -32,6 +32,7 @@ Pulled from [package.json](package.json):
 | `clsx`, `tailwind-merge`, `class-variance-authority` | — | Conditional classNames; used by [src/lib/utils.ts](src/lib/utils.ts) `cn()` |
 | `tw-animate-css` | 1.4.0 | Tailwind animation utilities |
 | `react-day-picker` | 10.0.1 | Used by shadcn `calendar.tsx` |
+| `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` + `@dnd-kit/modifiers` | — | Touch/pointer/keyboard-accessible drag-and-drop for reordering exercises in settings | https://dndkit.com |
 | `patch-package` | 8.0.1 | Persists a one-line fix to `next/dist/lib/fs/write-atomic.js` (see §13) | https://github.com/ds300/patch-package |
 
 **Next.js 16 specifics that surprise people:**
@@ -142,6 +143,8 @@ On success, the callback redirects to the `next` query param (defaulting to `/da
 - **Redirect URLs:** `https://thelogbook.studio/**` and `http://localhost:3000/**`
 - **Email template link:** `{{ .ConfirmationURL }}` (Supabase appends the right path automatically)
 
+**Session persistence.** Both cookie-setting paths ([src/proxy.ts](src/proxy.ts) `setAll` and [src/lib/supabase.ts](src/lib/supabase.ts) `setAll`) spread `maxAge: 60 * 60 * 24 * 365` on top of the options Supabase provides, so the browser keeps auth cookies for a year. The middleware's `getUser()` call refreshes the underlying tokens on every request, so as long as the user visits within the Supabase project's refresh-token window (a server-side setting), they stay logged in indefinitely.
+
 **Sign-out and delete account.** `signOut` at [actions.ts:48](src/lib/actions.ts#L48) calls `supabase.auth.signOut()`. `deleteAccount` at [actions.ts:54](src/lib/actions.ts#L54) calls the `delete_account` Postgres function — defined at [supabase/schema.sql:60-69](supabase/schema.sql#L60-L69) as a `security definer` function that cascades a delete across `session_logs`, `weekly_logs`, `user_info`, and `auth.users`.
 
 ---
@@ -158,6 +161,7 @@ Source of truth: [supabase/schema.sql](supabase/schema.sql). Three tables, all r
 | `spine` | jsonb | Spine exercises (warmup-style routine) |
 | `focus_1`, `focus_2`, `focus_3` | jsonb | Three named focus areas |
 | `weekly_focus` | jsonb | `{ weekly_A, weekly_B, weekly_C }` — labels for weekly planning categories |
+| `weekly_goal_hours` | integer | Hours-per-week target for the practice ring on `/dashboard`. Default `3`. |
 
 Each `spine` / `focus_*` JSONB has the shape:
 
@@ -207,8 +211,9 @@ The per-user config (3 focus areas, variable exercise count, parallel arrays for
 [src/app/auth/callback/route.ts](src/app/auth/callback/route.ts) is a Route Handler (not a page) — see §5.
 
 ### `/dashboard`
-[src/app/dashboard/page.tsx](src/app/dashboard/page.tsx) reads all of the user's `session_logs` and the three focus-area names from `user_info`, builds a focus-name → chart-color map with `buildFocusColorMap` from [src/lib/focus-colors.ts:9](src/lib/focus-colors.ts#L9), and renders `<DashboardClient>` ([src/app/dashboard/dashboard-client.tsx](src/app/dashboard/dashboard-client.tsx)). The client component renders:
+[src/app/dashboard/page.tsx](src/app/dashboard/page.tsx) reads all of the user's `session_logs` and the three focus-area names + `weekly_goal_hours` from `user_info`, builds a focus-name → chart-color map with `buildFocusColorMap` from [src/lib/focus-colors.ts:9](src/lib/focus-colors.ts#L9), and renders `<DashboardClient>` ([src/app/dashboard/dashboard-client.tsx](src/app/dashboard/dashboard-client.tsx)). The client component renders:
 
+- A `<PracticeRing>` ([src/app/dashboard/practice-ring.tsx](src/app/dashboard/practice-ring.tsx)) — Apple-Fitness-style SVG ring filled by total practice hours vs. goal. Shown only in Week and Month tabs; the goal scales as `weeklyGoal × (daysInMonth / 7)` in Month view. Hidden in All-time.
 - A `MonthCalendar` (custom, Monday-aligned) from [src/app/dashboard/charts.tsx:19](src/app/dashboard/charts.tsx#L19) — color-coded heatmap of practice days.
 - A `WeeklyStackedChart` (Recharts) — stacked hours by focus area per ISO week.
 - A list of recent sessions with click-through to `/log?date=…`.
@@ -218,6 +223,11 @@ The per-user config (3 focus areas, variable exercise count, parallel arrays for
 
 The client form [src/app/log/form.tsx](src/app/log/form.tsx) lets the user pick today's focus, toggle exercises, record per-exercise notes and audio, log mood/focus stars, run the timer, and save. Save calls `saveSession` at [actions.ts:96](src/lib/actions.ts#L96); delete calls `deleteSession` at [actions.ts:128](src/lib/actions.ts#L128). The timer is automatically stopped on save (via `stopTimer()` from `useTimer`).
 
+Notable UX details in the form:
+- **Spine checkboxes.** Each spine row has an opt-in checkbox; only checked rows are persisted to `exercises_finished.spine`. Backward compatible because rows previously in saved data are auto-checked on load. Typing into a spine notes field also auto-checks the row on the empty→non-empty transition.
+- **"Have fun!" virtual exercise.** Every focus area's dropdown includes a synthetic `"Have fun!"` option (constant in `form.tsx`) that isn't stored in `user_info`. Always available, like the `"Free"` top-level focus.
+- **Per-card save indicator.** A small `<SaveIndicator>` ("Saving…" / "Saved" / red "Error saving") renders in each editable `<ExerciseRow>` header. The indicator state is driven by the form-level `saveStatus`, fired both by the 2 s auto-save effect and by the manual `handleSave` button.
+
 ### `/week`
 [src/app/week/page.tsx](src/app/week/page.tsx) loads the weekly-focus labels and any existing `weekly_logs.focus_info`. The client form [src/app/week/form.tsx](src/app/week/form.tsx) renders one textarea per active label and auto-saves on a 800 ms debounce — see [week/form.tsx:31-46](src/app/week/form.tsx#L31-L46). Save status (`idle | saving | saved | error`) is shown inline.
 
@@ -225,8 +235,9 @@ The client form [src/app/log/form.tsx](src/app/log/form.tsx) lets the user pick 
 [src/app/settings/page.tsx](src/app/settings/page.tsx) is the most involved server page. If `user_info` does not yet exist, it inserts a default config ([settings/page.tsx:27-62](src/app/settings/page.tsx#L27-L62)) with starter Guitar / Voice / Creative exercises, then redirects to `/settings`. Otherwise it renders four sections via [src/app/settings/editor.tsx](src/app/settings/editor.tsx):
 
 - `FocusNamesForm` — rename the three focus areas (`saveFocusNames`)
-- `ExerciseEditor` — edit exercises per category (`saveExercises`)
+- `ExerciseEditor` — edit exercises per category (`saveExercises`). Rows are drag-reorderable via `@dnd-kit/sortable`: each row carries a stable `_uid` and a `GripVertical` handle, and `arrayMove` + the existing debounced save persist the new order. Since `saveExercises` already writes `all_ex`/`focus_bool`/`notes`/`focus_ex` arrays in row order, the practice log automatically reflects the new ordering.
 - `WeeklyLabelsForm` — rename weekly planning categories (`saveWeeklyLabels`)
+- `WeeklyGoalForm` — set hours-per-week goal for the dashboard ring (`saveWeeklyGoal`)
 - `AccountPanel` — show email, export CSV (`exportSessionsCSV`), sign out, delete account
 
 All four use the same `useDebounce` hook at [editor.tsx:16-35](src/app/settings/editor.tsx#L16-L35) with try/catch so a failed save shows an "Error saving" message instead of getting stuck on "saving".
@@ -257,6 +268,7 @@ All four use the same `useDebounce` hook at [editor.tsx:16-35](src/app/settings/
 - [src/components/metronome.tsx](src/components/metronome.tsx) — Web Audio API metronome. Schedules ticks ahead of time using the standard "lookahead scheduler" pattern ([metronome.tsx:107-115](src/components/metronome.tsx#L107-L115)). All audio reads go through `useRef`s rather than React state — UI state and refs are kept in sync via the setters at [L48-L80](src/components/metronome.tsx#L48-L80) — so the scheduler never sees stale values. Supports BPM 40-240, beats-per-bar 1-9, beat unit 2/4/8, accent pattern (beat 1 is always accented), random-accent mode, and tap tempo.
 - [src/components/week-strip.tsx](src/components/week-strip.tsx) — 7-day strip used on `/log` and `/week`. Each day pill takes an optional CSS background from a `dayColors` map (single focus = solid color; dual focus = 50/50 gradient — see `buildDayColors` at [src/lib/focus-colors.ts:20](src/lib/focus-colors.ts#L20)).
 - [src/components/info-dialog.tsx](src/components/info-dialog.tsx) — "How it works" modal. Auto-opens on first visit (gated by `localStorage["logbook_info_seen"]`). Renders the `FEATURES` array from `src/lib/features.ts`.
+- [src/app/dashboard/practice-ring.tsx](src/app/dashboard/practice-ring.tsx) — SVG progress ring used only on `/dashboard`. Two concentric circles (background track + colored progress arc), animated `stroke-dashoffset`, brand color until 100% then a success green. Imports `formatDuration` from `dashboard-client.tsx` for the raw-hours line.
 
 ### Infra
 - [src/components/sw-register.tsx](src/components/sw-register.tsx) — registers `/sw.js` on mount; silently swallows errors (e.g. unsupported browsers).
@@ -272,7 +284,7 @@ Every server-side write lives in [src/lib/actions.ts](src/lib/actions.ts). The f
 
 | Export | Location | Role |
 |---|---|---|
-| `getStreak(todayStr?)` | [L18](src/lib/actions.ts#L18) | Count consecutive practiced days (excluding `Free` / `Skipped`), capped at 90. Accepts a local-TZ date string so it doesn't miscount across midnight UTC. |
+| `getStreak(todayStr?)` | [L18](src/lib/actions.ts#L18) | Count consecutive ISO **weeks** whose summed practice minutes (excluding `Free` / `Skipped`) reach `weekly_goal_hours × 60`, capped at 90 weeks. The current week being incomplete doesn't break the streak. Header renders the count as `🔥 Nw`. |
 | `signOut()` | [L48](src/lib/actions.ts#L48) | Supabase sign-out, redirect to `/login`. |
 | `deleteAccount()` | [L54](src/lib/actions.ts#L54) | Call the `delete_account` Postgres function, redirect to `/login`. |
 | `sendMagicLink(formData)` | [L61](src/lib/actions.ts#L61) | Email magic link with origin derived from `x-forwarded-host`. |
@@ -284,6 +296,7 @@ Every server-side write lives in [src/lib/actions.ts](src/lib/actions.ts). The f
 | `saveFocusNames(names)` | [L227](src/lib/actions.ts#L227) | Patch the `name` field on `focus_1/2/3` JSONB. |
 | `saveExercises(fieldName, categoryName, rows)` | [L253](src/lib/actions.ts#L253) | Replace the whole `spine` / `focus_*` JSONB. |
 | `saveWeeklyLabels(labels)` | [L271](src/lib/actions.ts#L271) | Patch `weekly_focus` JSONB. |
+| `saveWeeklyGoal(hours)` | — | Update `weekly_goal_hours`. Revalidates `/settings` and `/dashboard`. |
 
 After every write, the action calls `revalidatePath(...)` to invalidate the relevant page's cache so the next render reads fresh data.
 

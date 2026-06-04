@@ -3,13 +3,14 @@ create extension if not exists "uuid-ossp";
 
 -- Tables
 create table user_info (
-  id           bigint generated always as identity primary key,
-  user_id      uuid references auth.users(id) not null unique,
-  spine        jsonb,
-  focus_1      jsonb,
-  focus_2      jsonb,
-  focus_3      jsonb,
-  weekly_focus jsonb
+  id                 bigint generated always as identity primary key,
+  user_id            uuid references auth.users(id) not null unique,
+  spine              jsonb,
+  focus_1            jsonb,
+  focus_2            jsonb,
+  focus_3            jsonb,
+  weekly_focus       jsonb,
+  weekly_goal_hours  integer default 3
 );
 
 create table session_logs (

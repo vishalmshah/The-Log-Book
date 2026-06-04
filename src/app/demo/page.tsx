@@ -19,6 +19,7 @@ export default function DemoPage() {
         sessions={DEMO_SESSIONS}
         focusNames={DEMO_FOCUS_NAMES}
         focusColorMap={focusColorMap}
+        goalHours={3}
       />
     </PageContainer>
   );
