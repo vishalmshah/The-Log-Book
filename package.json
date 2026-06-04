@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "rm -rf .next/dev && next dev",
+    "dev": "next dev",
+    "dev:clean": "rm -rf .next/dev && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

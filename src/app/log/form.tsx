@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Star, X, Plus, Clock, Mic, Square } from "lucide-react";
-import { saveSession, getExerciseHistory, type ExerciseEntry } from "@/lib/actions";
+import { saveSession, deleteSession, getExerciseHistory, type ExerciseEntry } from "@/lib/actions";
 import { WeekStrip } from "@/components/week-strip";
 import { useTimer } from "@/components/timer-context";
 import { createClient } from "@/lib/supabase-browser";
@@ -454,6 +454,7 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
 
   function handleSave() {
     const todaysFocus = second ? `${primary} + ${second}` : primary;
+    stopTimer();
     startTransition(async () => {
       try {
         await saveSession({
@@ -466,6 +467,18 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
         setCompleted(true);
       } catch {
         alert("Failed to save session. Please check your connection and try again.");
+      }
+    });
+  }
+
+  function handleDelete() {
+    if (!confirm("Delete this session? This can't be undone.")) return;
+    startTransition(async () => {
+      try {
+        await deleteSession(initialDate);
+        router.refresh();
+      } catch {
+        alert("Failed to delete session. Please try again.");
       }
     });
   }
@@ -572,10 +585,16 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
         <div className="flex items-center justify-between rounded-lg px-4 py-3 text-sm"
           style={{ background: "color-mix(in srgb, var(--success) 15%, var(--bg-content))", border: "1px solid var(--success)" }}>
           <span className="font-medium" style={{ color: "var(--success)" }}>Session saved ✓</span>
-          <button type="button" onClick={() => setCompleted(false)}
-            className="text-muted-foreground hover:text-foreground">
-            Edit
-          </button>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => setCompleted(false)}
+              className="text-muted-foreground hover:text-foreground">
+              Edit
+            </button>
+            <button type="button" onClick={handleDelete} disabled={isPending}
+              className="text-muted-foreground hover:text-destructive">
+              Delete
+            </button>
+          </div>
         </div>
       )}
 

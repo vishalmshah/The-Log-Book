@@ -125,6 +125,14 @@ export async function saveSession(payload: SessionPayload) {
   revalidatePath("/dashboard");
 }
 
+export async function deleteSession(date: string) {
+  const { supabase, user } = await getUser();
+  const { error } = await supabase.from("session_logs").delete().eq("user_id", user.id).eq("date", date);
+  if (error) throw new Error(error.message);
+  revalidatePath("/log");
+  revalidatePath("/dashboard");
+}
+
 export async function getExerciseHistory(exercise: string): Promise<{ date: string; notes: string; audioUrl?: string }[]> {
   const { supabase, user } = await getUser();
   const { data } = await supabase
