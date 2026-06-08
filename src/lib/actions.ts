@@ -266,6 +266,7 @@ export async function saveFocusNames(names: { focus1: string; focus2: string; fo
 export interface ExerciseRow {
   ex: string;
   focused: boolean;
+  starred: boolean;
   note: string;
 }
 
@@ -278,8 +279,10 @@ export async function saveExercises(fieldName: string, categoryName: string, row
         name: categoryName,
         all_ex: rows.map((r) => r.ex),
         focus_bool: rows.map((r) => r.focused),
+        starred_bool: rows.map((r) => r.starred),
         notes: rows.map((r) => r.note),
         focus_ex: rows.filter((r) => r.focused).map((r) => r.ex),
+        starred_ex: rows.filter((r) => r.starred).map((r) => r.ex),
       },
     },
     { onConflict: "user_id" }

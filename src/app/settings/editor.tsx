@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useId } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { saveExercises, saveFocusNames, saveWeeklyLabels, saveWeeklyGoal, signOut, deleteAccount, exportSessionsCSV, type ExerciseRow } from "@/lib/actions";
-import { Trash2, Plus, GripVertical } from "lucide-react";
+import { Trash2, Plus, GripVertical, Star } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -251,6 +251,7 @@ interface Category {
   name: string;
   all_ex: string[];
   focus_bool: boolean[];
+  starred_bool?: boolean[];
   notes: string[];
 }
 
@@ -260,10 +261,12 @@ function SortableExerciseRow({
   row,
   onChange,
   onRemove,
+  showStarred,
 }: {
   row: RowWithUid;
   onChange: (patch: Partial<ExerciseRow>) => void;
   onRemove: () => void;
+  showStarred: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row._uid });
   const style = {
@@ -271,14 +274,29 @@ function SortableExerciseRow({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+  const gridCols = showStarred
+    ? "grid-cols-[1.25rem_2rem_2rem_1fr_1fr_2rem]"
+    : "grid-cols-[1.25rem_2rem_1fr_1fr_2rem]";
   return (
     <div ref={setNodeRef} style={style}
-      className="grid grid-cols-[1.25rem_2rem_1fr_1fr_2rem] items-center gap-2">
+      className={`grid ${gridCols} items-center gap-2`}>
       <button type="button" {...attributes} {...listeners}
         className="flex cursor-grab touch-none items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing"
         aria-label="Reorder exercise">
         <GripVertical className="h-4 w-4" />
       </button>
+      {showStarred && (
+        <button type="button" onClick={() => onChange({ starred: !row.starred })}
+          className="flex items-center justify-center"
+          aria-label={row.starred ? "Remove star" : "Star"}>
+          <Star
+            className="h-4 w-4"
+            style={row.starred
+              ? { fill: "var(--brand)", color: "var(--brand)" }
+              : { color: "var(--fg-muted)" }}
+          />
+        </button>
+      )}
       <Checkbox checked={row.focused} onCheckedChange={(v) => onChange({ focused: !!v })} />
       <Input value={row.ex} onChange={(e) => onChange({ ex: e.target.value })} placeholder="Exercise name" />
       <Input value={row.note} onChange={(e) => onChange({ note: e.target.value })} placeholder="Note" />
@@ -290,11 +308,12 @@ function SortableExerciseRow({
   );
 }
 
-export function ExerciseEditor({ category, fieldName }: { category: Category; fieldName: string }) {
+export function ExerciseEditor({ category, fieldName, showStarred = true }: { category: Category; fieldName: string; showStarred?: boolean }) {
   const [rows, setRows] = useState<RowWithUid[]>(() =>
     category.all_ex.map((ex, i) => ({
       ex,
       focused: category.focus_bool[i] ?? false,
+      starred: category.starred_bool?.[i] ?? false,
       note: category.notes[i] ?? "",
       _uid: crypto.randomUUID(),
     }))
@@ -311,13 +330,15 @@ export function ExerciseEditor({ category, fieldName }: { category: Category; fi
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const dndId = useId();
+
   function update(i: number, patch: Partial<ExerciseRow>) {
     setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)));
     trigger();
   }
 
   function addRow() {
-    setRows((prev) => [...prev, { ex: "", focused: false, note: "", _uid: crypto.randomUUID() }]);
+    setRows((prev) => [...prev, { ex: "", focused: false, starred: false, note: "", _uid: crypto.randomUUID() }]);
     trigger();
   }
 
@@ -340,10 +361,16 @@ export function ExerciseEditor({ category, fieldName }: { category: Category; fi
 
   return (
     <div className="space-y-2">
-      <div className="hidden grid-cols-[1.25rem_2rem_1fr_1fr_2rem] gap-2 px-1 text-xs text-muted-foreground sm:grid">
-        <span /><span>On</span><span>Exercise</span><span>Note</span><span />
+      <div className={`hidden ${showStarred ? "grid-cols-[1.25rem_2rem_2rem_1fr_1fr_2rem]" : "grid-cols-[1.25rem_2rem_1fr_1fr_2rem]"} gap-2 px-1 text-xs text-muted-foreground sm:grid`}>
+        <span />
+        {showStarred && <span>Pin</span>}
+        <span>On</span>
+        <span>Exercise</span>
+        <span>Note</span>
+        <span />
       </div>
       <DndContext
+        id={dndId}
         sensors={sensors}
         collisionDetection={closestCenter}
         modifiers={[restrictToVerticalAxis, restrictToParentElement]}
@@ -356,6 +383,7 @@ export function ExerciseEditor({ category, fieldName }: { category: Category; fi
               row={row}
               onChange={(patch) => update(i, patch)}
               onRemove={() => removeRow(i)}
+              showStarred={showStarred}
             />
           ))}
         </SortableContext>

@@ -24,8 +24,11 @@ export function NavBar() {
           const active = pathname.startsWith(href);
           return (
             <Link key={href} href={href}
-              className="flex flex-1 flex-col items-center justify-center gap-1 pb-2 pt-3 text-xs transition-colors"
-              style={{ color: active ? "var(--brand)" : "var(--fg-muted)" }}>
+              className="flex flex-1 touch-manipulation flex-col items-center justify-center gap-1 pb-2 pt-3 text-xs transition-transform duration-100 active:scale-90"
+              style={{
+                color: active ? "var(--brand)" : "var(--fg-muted)",
+                WebkitTapHighlightColor: "transparent",
+              }}>
               <Icon className={`h-5 w-5 ${active ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
               <span>{label}</span>
             </Link>

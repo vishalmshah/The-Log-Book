@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-A code-level walkthrough of the app, for someone reading the codebase for the first time. For the practice methodology this app implements, see [README.md](README.md). For the visual design system, see [DESIGN.md](DESIGN.md).
+A code-level walkthrough of the app, for someone reading the codebase for the first time. For the practice methodology this app implements, see [README.md](README.md).
 
 ---
 
@@ -47,7 +47,6 @@ Pulled from [package.json](package.json):
 .
 ├── ARCHITECTURE.md          ← this file
 ├── README.md                ← practice method, user-facing
-├── DESIGN.md                ← visual design system
 ├── AGENTS.md / CLAUDE.md    ← short instructions for AI agents
 ├── components.json          ← shadcn config (base-nova style)
 ├── next.config.ts           ← Turbopack root + cache flag
@@ -317,7 +316,7 @@ After every write, the action calls `revalidatePath(...)` to invalidate the rele
 ## 11. Styling system
 
 - **Tailwind v4** via `@tailwindcss/postcss` ([postcss.config.mjs](postcss.config.mjs)). There is **no `tailwind.config.js`** — v4 uses CSS-first config. See https://tailwindcss.com/docs/v4-beta. Tailwind is imported from [src/app/globals.css](src/app/globals.css), which also defines the staff-line background pattern.
-- **Design tokens** are CSS variables in `src/app/design-tokens.css` (imported from `globals.css`). All colors (`--brand`, `--bg-content`, `--fg-primary`, `--chart-1..4`, etc.), the radius scale (`--radius-lg`), and shadcn's variable mappings live there. Dark mode is a `.dark` class override on the same variables. The design intent is documented in [DESIGN.md](DESIGN.md).
+- **Design tokens** are CSS variables in `src/app/design-tokens.css` (imported from `globals.css`). All colors (`--brand`, `--bg-content`, `--fg-primary`, `--chart-1..4`, etc.), the radius scale (`--radius-lg`), and shadcn's variable mappings live there. Dark mode is a `.dark` class override on the same variables.
 - **shadcn** is configured via [components.json](components.json) with `style: "base-nova"`, `cssVariables: true`, and `baseColor: "neutral"`. Aliases: `@/components`, `@/components/ui`, `@/lib`, `@/lib/utils`.
 - **Theme switching** is provided by `next-themes` ([src/components/theme-provider.tsx](src/components/theme-provider.tsx)) with `attribute="class"`. The toggle button is in [Header.tsx:56-64](src/components/header.tsx#L56-L64). `mounted` is gated to avoid hydration mismatch.
 - **Fonts:** "Thwack" (a VT323-style pixel display font) loaded locally from `public/fonts/Thwack.ttf` via `next/font/local`, and "Karla" loaded from Google Fonts via `next/font/google`. Both are declared in [src/app/layout.tsx:13-23](src/app/layout.tsx#L13-L23) and exposed as `--font-vt323` and `--font-karla`.
@@ -336,22 +335,34 @@ After every write, the action calls `revalidatePath(...)` to invalidate the rele
 
 ## 13. Build and dev environment
 
-**Scripts** ([package.json:5-12](package.json#L5-L12)):
+**Scripts** ([package.json:5-13](package.json#L5-L13)):
 
 ```json
-"dev": "next dev",
-"dev:clean": "rm -rf .next/dev && next dev",
+"dev": "next dev --webpack",
+"dev:clean": "rm -rf .next/dev && next dev --webpack",
+"fix-dev": "bash scripts/fix-dev.sh",
 "build": "next build",
 "start": "next start",
 "lint": "eslint",
 "postinstall": "patch-package"
 ```
 
-**`dev` vs `dev:clean`.** Normal use: `npm run dev`. The Turbopack FS cache (default in Next 16) keeps chunk hashes stable across restarts and is required for startup — if `.next/dev/` is missing key manifests on first request, the server returns 500s. `dev:clean` exists as an escape hatch: if you ever hit MODULE_NOT_FOUND for chunk files mid-session (stale compiled output referencing chunks from a previous session), run it once to clear `.next/dev`, then go back to `npm run dev`.
+**Why `--webpack` in dev.** Turbopack is Next 16's default dev bundler, but its persistent cache (the SST files in `.next/dev/`) repeatedly fell into an unwritable state on this machine ("Persisting failed: Unable to write SST file" → manifest reads fail → 500 on every request). The `--webpack` flag uses the older bundler in dev, which is slower (~5-10 s cold start vs. ~300 ms) but reliable. Production builds (`next build` / `npm run build`) are unaffected — that path is unchanged and still uses Turbopack.
+
+**`dev:clean`** clears stale `.next/dev/` output, useful if you ever switch back to Turbopack and hit MODULE_NOT_FOUND for chunk files mid-session.
+
+**`fix-dev`** runs [scripts/fix-dev.sh](scripts/fix-dev.sh) — full reinstall + patch reapply. Use this if dev returns 500s with "Persisting failed: Unable to write SST file" or "Cannot find module '.next/dev/server/middleware-manifest.json'" errors, even on the webpack path (the underlying corruption can survive across bundlers).
 
 **The patch.** [patches/next+16.2.6.patch](patches/next+16.2.6.patch) adds one `mkdirSync(dirname(tempPath), { recursive: true })` call before the atomic file write in `next/dist/lib/fs/write-atomic.js`. This fixes an ENOENT race during Turbopack's `_buildManifest` writes. The patch is reapplied automatically via `patch-package` in `postinstall`.
 
-**If dev mysteriously starts returning 500s on every request** with errors like "Persisting failed: Unable to write SST file" or "Cannot find module '.next/dev/server/middleware-manifest.json'", the `node_modules` install is corrupt. Fix: `rm -rf node_modules .next && npm install`. This re-runs `postinstall` so the patch is reapplied.
+**If dev mysteriously starts returning 500s on every request** with errors like "Persisting failed: Unable to write SST file" or "Cannot find module '.next/dev/server/middleware-manifest.json'", the `node_modules` install is corrupt. Fix:
+
+```
+rm -rf node_modules .next && npm install
+npx patch-package   # if postinstall didn't run, the SST fix won't be in node_modules
+```
+
+The `postinstall` hook usually reapplies the patch automatically, but it occasionally gets skipped (npm caching, prior install state, etc.) — in that case `npx patch-package` puts the `mkdirSync` line back into `next/dist/lib/fs/write-atomic.js`. You can confirm it's applied by grepping `node_modules/next/dist/lib/fs/write-atomic.js` for `mkdirSync`.
 
 **Known Turbopack quirk (dev only).** Turbopack compiles routes lazily — the first request to a route after `npm run dev` starts hits a ~800 ms compile window. Subsequent requests are fast. Production builds (`next build`) have no lazy compilation.
 

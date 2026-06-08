@@ -4,7 +4,8 @@ import { FEATURES } from "@/lib/features";
 
 const REPO = "https://github.com/vishalmshah/music-practice-app";
 
-export function LandingPage() {
+export function LandingPage({ loggedIn = false }: { loggedIn?: boolean }) {
+  const ctaHref = loggedIn ? "/dashboard" : "/login";
   return (
     <div className="min-h-screen">
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
@@ -35,7 +36,7 @@ export function LandingPage() {
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
-            href="/login"
+            href={ctaHref}
             className="rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-transform hover:-translate-y-0.5"
             style={{ background: "var(--brand)" }}
           >
@@ -156,7 +157,7 @@ export function LandingPage() {
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
-              href="/login"
+              href={ctaHref}
               className="inline-block rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-transform hover:-translate-y-0.5"
               style={{ background: "var(--brand)" }}
             >

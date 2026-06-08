@@ -42,6 +42,13 @@ export default async function LogPage({ searchParams }: Props) {
     return { name: raw.name, focus_ex: raw.focus_ex, notes: raw.focus_ex.map((ex) => noteByEx[ex] ?? "") };
   }
 
+  function withStarred(raw: { name: string; all_ex: string[]; focus_ex: string[]; starred_ex?: string[]; notes: string[] }) {
+    const noteByEx = Object.fromEntries(raw.all_ex.map((ex, i) => [ex, raw.notes[i] ?? ""]));
+    const starred_ex = raw.starred_ex ?? [];
+    const optional_ex = raw.focus_ex.filter((ex) => !starred_ex.includes(ex));
+    return { name: raw.name, starred_ex, optional_ex, noteByEx };
+  }
+
   const focusInfo = weekLog?.focus_info ?? {};
   const weeklyFocus = Object.entries(focusInfo)
     .filter(([, notes]) => notes)
@@ -57,9 +64,9 @@ export default async function LogPage({ searchParams }: Props) {
         initialDate={dateStr}
         weeklyFocus={weeklyFocus}
         spine={withNotes(config.spine)}
-        focus1={withNotes(config.focus_1)}
-        focus2={withNotes(config.focus_2)}
-        focus3={withNotes(config.focus_3)}
+        focus1={withStarred(config.focus_1)}
+        focus2={withStarred(config.focus_2)}
+        focus3={withStarred(config.focus_3)}
         existing={session}
         showWeeklyPrompt={showWeeklyPrompt}
         dayColors={dayColors}

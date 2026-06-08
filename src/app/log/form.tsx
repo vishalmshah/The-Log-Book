@@ -191,6 +191,31 @@ function initSpineEntries(focusEx: string[], ef: Record<string, unknown>): Spine
 
 interface ExerciseCategory { name: string; focus_ex: string[]; notes: string[]; }
 
+interface FocusCategory {
+  name: string;
+  starred_ex: string[];
+  optional_ex: string[];
+  noteByEx: Record<string, string>;
+}
+
+type FocusRow = ExerciseEntry & { checked: boolean };
+
+function initFocusEntries(starredEx: string[], saved: ExerciseEntry[]): FocusRow[] {
+  const rows: FocusRow[] = starredEx.map((ex) => {
+    const match = saved.find((e) => e.exercise === ex);
+    return {
+      exercise: ex,
+      sessionNotes: match?.sessionNotes ?? "",
+      audioUrl: match?.audioUrl,
+      checked: !!match,
+    };
+  });
+  for (const e of saved) {
+    if (!starredEx.includes(e.exercise)) rows.push({ ...e, checked: true });
+  }
+  return rows;
+}
+
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 function SaveIndicator({ status }: { status?: SaveStatus }) {
@@ -210,9 +235,9 @@ interface Props {
   initialDate: string;
   weeklyFocus: WeeklyFocusEntry[];
   spine: ExerciseCategory;
-  focus1: ExerciseCategory;
-  focus2: ExerciseCategory;
-  focus3: ExerciseCategory;
+  focus1: FocusCategory;
+  focus2: FocusCategory;
+  focus3: FocusCategory;
   existing: ExistingSession | null;
   showWeeklyPrompt: boolean;
   dayColors?: Record<string, string>;
@@ -266,15 +291,13 @@ function HistoryDialog({ exercise, open, onClose }: { exercise: string; open: bo
 
 function ExerciseRow({
   exercise, settingsNote, sessionNotes, onSessionNotesChange,
-  availableExercises, onExerciseChange, onRemove, readOnly,
+  onRemove, readOnly,
   date, audioUrl, onAudioSaved, checked, onCheckedChange, saveStatus,
 }: {
   exercise: string;
   settingsNote: string;
   sessionNotes: string;
   onSessionNotesChange: (v: string) => void;
-  availableExercises?: string[];
-  onExerciseChange?: (v: string) => void;
   onRemove?: () => void;
   readOnly?: boolean;
   date: string;
@@ -298,16 +321,7 @@ function ExerciseRow({
             aria-label={`Mark ${exercise} as done`}
           />
         )}
-        {(!readOnly && availableExercises) ? (
-          <Select value={exercise} onValueChange={(v) => { if (v) onExerciseChange?.(v); }}>
-            <SelectTrigger className="h-8 flex-1 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {availableExercises.map((ex) => <SelectItem key={ex} value={ex}>{ex}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="flex-1 text-sm font-medium">{exercise}</span>
-        )}
+        <span className="flex-1 text-sm font-medium">{exercise}</span>
         {!readOnly && <SaveIndicator status={saveStatus} />}
         <button type="button" onClick={() => setHistoryOpen(true)}
           className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -350,62 +364,60 @@ function ExerciseRow({
 const JUST_HAVE_FUN = "Have fun!";
 
 function FocusSection({ category, entries, onChange, readOnly, date, saveStatus }: {
-  category: ExerciseCategory;
-  entries: ExerciseEntry[];
-  onChange: (entries: ExerciseEntry[]) => void;
+  category: FocusCategory;
+  entries: FocusRow[];
+  onChange: (entries: FocusRow[]) => void;
   readOnly?: boolean;
   date: string;
   saveStatus?: SaveStatus;
 }) {
-  const effectiveFocusEx = category.focus_ex.includes(JUST_HAVE_FUN)
-    ? category.focus_ex
-    : [...category.focus_ex, JUST_HAVE_FUN];
-  const noteByEx = Object.fromEntries(category.focus_ex.map((ex, i) => [ex, category.notes[i] ?? ""]));
-
-  function addedByOthers(currentIdx: number) {
-    return new Set(entries.filter((_, j) => j !== currentIdx).map((e) => e.exercise));
-  }
-
-  function availableForRow(i: number) {
-    const others = addedByOthers(i);
-    return effectiveFocusEx.filter((ex) => !others.has(ex));
-  }
-
-  const totalAdded = new Set(entries.map((e) => e.exercise));
-  const canAdd = effectiveFocusEx.some((ex) => !totalAdded.has(ex));
-
-  function addExercise() {
-    const next = effectiveFocusEx.find((ex) => !totalAdded.has(ex));
-    if (next) onChange([...entries, { exercise: next, sessionNotes: "" }]);
-  }
-
-  function update(i: number, patch: Partial<ExerciseEntry>) {
+  function update(i: number, patch: Partial<FocusRow>) {
     onChange(entries.map((e, j) => j === i ? { ...e, ...patch } : e));
   }
 
+  function removeRow(i: number) {
+    onChange(entries.filter((_, j) => j !== i));
+  }
+
+  const alreadyAdded = new Set(entries.map((e) => e.exercise));
+  const availableToAdd = [...category.optional_ex, JUST_HAVE_FUN].filter((ex) => !alreadyAdded.has(ex));
+
   return (
     <div className="space-y-3">
-      {entries.map((entry, i) => (
-        <ExerciseRow key={i}
-          exercise={entry.exercise}
-          settingsNote={noteByEx[entry.exercise] ?? ""}
-          sessionNotes={entry.sessionNotes}
-          onSessionNotesChange={(v) => update(i, { sessionNotes: v })}
-          availableExercises={readOnly ? undefined : availableForRow(i)}
-          onExerciseChange={(v) => { if (v) update(i, { exercise: v, sessionNotes: entries[i].sessionNotes }); }}
-          onRemove={readOnly ? undefined : () => onChange(entries.filter((_, j) => j !== i))}
-          readOnly={readOnly}
-          date={date}
-          audioUrl={entry.audioUrl}
-          onAudioSaved={(url) => update(i, { audioUrl: url })}
-          saveStatus={saveStatus}
-        />
-      ))}
-      {!readOnly && canAdd && (
-        <button type="button" onClick={addExercise}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <Plus className="h-4 w-4" />Add exercise
-        </button>
+      {entries.map((entry, i) => {
+        const isStarred = category.starred_ex.includes(entry.exercise);
+        return (
+          <ExerciseRow key={entry.exercise}
+            exercise={entry.exercise}
+            settingsNote={category.noteByEx[entry.exercise] ?? ""}
+            sessionNotes={entry.sessionNotes}
+            onSessionNotesChange={(v) => update(i, {
+              sessionNotes: v,
+              checked: entry.checked || (entry.sessionNotes === "" && v !== ""),
+            })}
+            checked={entry.checked}
+            onCheckedChange={(v) => update(i, { checked: v })}
+            onRemove={(!isStarred && !readOnly) ? () => removeRow(i) : undefined}
+            readOnly={readOnly}
+            date={date}
+            audioUrl={entry.audioUrl}
+            onAudioSaved={(url) => update(i, { audioUrl: url })}
+            saveStatus={saveStatus}
+          />
+        );
+      })}
+      {!readOnly && availableToAdd.length > 0 && (
+        <Select value="" onValueChange={(ex) => {
+          if (!ex) return;
+          onChange([...entries, { exercise: ex, sessionNotes: "", checked: true }]);
+        }}>
+          <SelectTrigger className="h-9 text-sm text-muted-foreground">
+            <SelectValue placeholder="Add an exercise…" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableToAdd.map((ex) => <SelectItem key={ex} value={ex}>{ex}</SelectItem>)}
+          </SelectContent>
+        </Select>
       )}
     </div>
   );
@@ -428,9 +440,19 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
   const [primary, setPrimary] = useState(initPrimary);
   const [second, setSecond] = useState<string | null>(initSecond);
 
+  const focusCategoryMapForInit: Record<string, FocusCategory> = {
+    [focus1.name]: focus1, [focus2.name]: focus2, [focus3.name]: focus3,
+  };
+  const initPrimaryStarred = focusCategoryMapForInit[initPrimary]?.starred_ex ?? [];
+  const initSecondStarred = initSecond ? (focusCategoryMapForInit[initSecond]?.starred_ex ?? []) : [];
+
   const [spineEntries, setSpineEntries] = useState<SpineRow[]>(() => initSpineEntries(spine.focus_ex, ef));
-  const [primaryEntries, setPrimaryEntries] = useState<ExerciseEntry[]>(() => (ef?.primary ?? []) as ExerciseEntry[]);
-  const [secondaryEntries, setSecondaryEntries] = useState<ExerciseEntry[]>(() => (ef?.secondary ?? []) as ExerciseEntry[]);
+  const [primaryEntries, setPrimaryEntries] = useState<FocusRow[]>(() =>
+    initFocusEntries(initPrimaryStarred, (ef?.primary ?? []) as ExerciseEntry[])
+  );
+  const [secondaryEntries, setSecondaryEntries] = useState<FocusRow[]>(() =>
+    initFocusEntries(initSecondStarred, (ef?.secondary ?? []) as ExerciseEntry[])
+  );
 
   const [moodStars, setMoodStars] = useState<number | null>(existing?.additional_notes?.mood_stars ?? null);
   const [focusStars, setFocusStars] = useState<number | null>(existing?.additional_notes?.focus_stars ?? null);
@@ -470,7 +492,12 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
           spineEntries: spineEntries
             .filter((e) => e.checked)
             .map((e) => ({ exercise: e.exercise, sessionNotes: e.sessionNotes, audioUrl: e.audioUrl })),
-          primaryEntries, secondaryEntries,
+          primaryEntries: primaryEntries
+            .filter((e) => e.checked)
+            .map((e) => ({ exercise: e.exercise, sessionNotes: e.sessionNotes, audioUrl: e.audioUrl })),
+          secondaryEntries: secondaryEntries
+            .filter((e) => e.checked)
+            .map((e) => ({ exercise: e.exercise, sessionNotes: e.sessionNotes, audioUrl: e.audioUrl })),
           moodStars, focusStars, additionalNotes,
           practiceDuration: secondsToDuration(elapsedRef.current),
           completed: false,
@@ -485,17 +512,22 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spineEntries, primaryEntries, secondaryEntries, moodStars, focusStars, additionalNotes, primary, second]);
 
-  const focusCategoryMap: Record<string, ExerciseCategory> = {
+  const focusCategoryMap: Record<string, FocusCategory> = {
     [focus1.name]: focus1, [focus2.name]: focus2, [focus3.name]: focus3,
   };
   const allFocusNames = [focus1.name, focus2.name, focus3.name].filter(Boolean);
   const primaryCategory = focusCategoryMap[primary];
   const secondCategory = second ? focusCategoryMap[second] : null;
 
+  function freshEntriesFor(name: string | null): FocusRow[] {
+    if (!name) return [];
+    return initFocusEntries(focusCategoryMap[name]?.starred_ex ?? [], []);
+  }
+
   function handlePrimaryChange(val: string) {
     setPrimary(val);
     if (val === second) setSecond(null);
-    setPrimaryEntries([]);
+    setPrimaryEntries(freshEntriesFor(val));
   }
 
   function handleSave() {
@@ -509,7 +541,12 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
           spineEntries: spineEntries
             .filter((e) => e.checked)
             .map((e) => ({ exercise: e.exercise, sessionNotes: e.sessionNotes, audioUrl: e.audioUrl })),
-          primaryEntries, secondaryEntries,
+          primaryEntries: primaryEntries
+            .filter((e) => e.checked)
+            .map((e) => ({ exercise: e.exercise, sessionNotes: e.sessionNotes, audioUrl: e.audioUrl })),
+          secondaryEntries: secondaryEntries
+            .filter((e) => e.checked)
+            .map((e) => ({ exercise: e.exercise, sessionNotes: e.sessionNotes, audioUrl: e.audioUrl })),
           moodStars, focusStars, additionalNotes,
           practiceDuration: secondsToDuration(elapsed),
           completed: true,
@@ -594,18 +631,22 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
             {second !== null ? (
               <>
                 <span className="text-sm text-muted-foreground">+</span>
-                <Select value={second} onValueChange={(v) => { if (v) { setSecond(v); setSecondaryEntries([]); } }}>
+                <Select value={second} onValueChange={(v) => { if (v) { setSecond(v); setSecondaryEntries(freshEntriesFor(v)); } }}>
                   <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {allFocusNames.filter((n) => n !== primary).map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <button type="button" onClick={() => { setSecond(null); setSecondaryEntries([]); }}
+                <button type="button" onClick={() => { setSecond(null); setSecondaryEntries([]); }} /* keep [] — clearing the second focus removes the section */
                   className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
               </>
             ) : (
               primary !== "Free" && allFocusNames.filter((n) => n !== primary).length > 0 && (
-                <button type="button" onClick={() => setSecond(allFocusNames.find((n) => n !== primary) ?? null)}
+                <button type="button" onClick={() => {
+                  const next = allFocusNames.find((n) => n !== primary) ?? null;
+                  setSecond(next);
+                  setSecondaryEntries(freshEntriesFor(next));
+                }}
                   className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
                   <Plus className="h-4 w-4" />Add second focus
                 </button>
