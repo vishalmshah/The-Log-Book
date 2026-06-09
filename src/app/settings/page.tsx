@@ -2,7 +2,8 @@ import { createServerClient } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ExerciseEditor, FocusNamesForm, WeeklyLabelsForm, WeeklyGoalForm, AccountPanel } from "./editor";
+import { FocusNamesForm, WeeklyLabelsForm, WeeklyGoalForm, AccountPanel } from "./editor";
+import { ExerciseEditorGroup } from "./exercise-editor-group";
 import { PageContainer } from "@/components/page-container";
 
 export default async function SettingsPage() {
@@ -81,17 +82,7 @@ export default async function SettingsPage() {
 
       <Separator />
 
-      {[
-        { category: spine,   fieldName: "spine",   title: "Spine Exercises",            desc: "Done every session regardless of focus mode." },
-        { category: focus_1, fieldName: "focus_1", title: `${focus_1.name} Exercises`,  desc: "Check up to 3 exercises to include in this focus mode." },
-        { category: focus_2, fieldName: "focus_2", title: `${focus_2.name} Exercises`,  desc: "Check up to 3 exercises to include in this focus mode." },
-        { category: focus_3, fieldName: "focus_3", title: `${focus_3.name} Exercises`,  desc: "Check up to 3 exercises to include in this focus mode." },
-      ].map(({ category, fieldName, title, desc }) => (
-        <Card key={fieldName}>
-          <CardHeader><CardTitle>{title}</CardTitle><CardDescription>{desc}</CardDescription></CardHeader>
-          <CardContent><ExerciseEditor category={category} fieldName={fieldName} showStarred={fieldName !== "spine"} /></CardContent>
-        </Card>
-      ))}
+      <ExerciseEditorGroup spine={spine} focus_1={focus_1} focus_2={focus_2} focus_3={focus_3} />
 
       <Separator />
 

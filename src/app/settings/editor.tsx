@@ -1,35 +1,24 @@
 "use client";
 
-import { useState, useRef, useTransition, useId } from "react";
+import { useState, useRef, useTransition } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { saveExercises, saveFocusNames, saveWeeklyLabels, saveWeeklyGoal, signOut, deleteAccount, exportSessionsCSV, type ExerciseRow } from "@/lib/actions";
+import { saveFocusNames, saveWeeklyLabels, saveWeeklyGoal, signOut, deleteAccount, exportSessionsCSV, type ExerciseRow } from "@/lib/actions";
 import { Trash2, Plus, GripVertical, Star } from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-// ── Shared debounce hook ──────────────────────────────────────────────────────
+// ── Shared debounce hook (used by the non-exercise forms) ─────────────────────
 
-type SaveStatus = "idle" | "saving" | "saved" | "error";
+export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 function useDebounce(fn: () => Promise<void>, delay = 800) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -247,7 +236,7 @@ export function AccountPanel({ email }: { email: string }) {
 
 // ── Exercise editor ───────────────────────────────────────────────────────────
 
-interface Category {
+export interface Category {
   name: string;
   all_ex: string[];
   focus_bool: boolean[];
@@ -255,7 +244,7 @@ interface Category {
   notes: string[];
 }
 
-type RowWithUid = ExerciseRow & { _uid: string };
+export type RowWithUid = ExerciseRow & { _uid: string };
 
 function SortableExerciseRow({
   row,
@@ -308,59 +297,37 @@ function SortableExerciseRow({
   );
 }
 
-export function ExerciseEditor({ category, fieldName, showStarred = true }: { category: Category; fieldName: string; showStarred?: boolean }) {
-  const [rows, setRows] = useState<RowWithUid[]>(() =>
-    category.all_ex.map((ex, i) => ({
-      ex,
-      focused: category.focus_bool[i] ?? false,
-      starred: category.starred_bool?.[i] ?? false,
-      note: category.notes[i] ?? "",
-      _uid: crypto.randomUUID(),
-    }))
-  );
-  const rowsRef = useRef(rows);
-  rowsRef.current = rows;
-
-  const { trigger, status } = useDebounce(() =>
-    saveExercises(fieldName, category.name, rowsRef.current)
-  );
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
-  const dndId = useId();
+export function ExerciseEditor({
+  rows,
+  onRowsChange,
+  fieldName,
+  showStarred = true,
+  saveStatus = "idle",
+}: {
+  rows: RowWithUid[];
+  onRowsChange: (rows: RowWithUid[]) => void;
+  fieldName: string;
+  showStarred?: boolean;
+  saveStatus?: SaveStatus;
+}) {
+  // Make the container itself a droppable so the cross-category drop target
+  // exists even when this category has zero rows.
+  const { setNodeRef } = useDroppable({ id: fieldName });
 
   function update(i: number, patch: Partial<ExerciseRow>) {
-    setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)));
-    trigger();
+    onRowsChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   }
 
   function addRow() {
-    setRows((prev) => [...prev, { ex: "", focused: false, starred: false, note: "", _uid: crypto.randomUUID() }]);
-    trigger();
+    onRowsChange([...rows, { ex: "", focused: false, starred: false, note: "", _uid: crypto.randomUUID() }]);
   }
 
   function removeRow(i: number) {
-    setRows((prev) => prev.filter((_, j) => j !== i));
-    trigger();
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setRows((prev) => {
-      const oldIndex = prev.findIndex((r) => r._uid === active.id);
-      const newIndex = prev.findIndex((r) => r._uid === over.id);
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      return arrayMove(prev, oldIndex, newIndex);
-    });
-    trigger();
+    onRowsChange(rows.filter((_, j) => j !== i));
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" ref={setNodeRef}>
       <div className={`hidden ${showStarred ? "grid-cols-[1.25rem_2rem_2rem_1fr_1fr_2rem]" : "grid-cols-[1.25rem_2rem_1fr_1fr_2rem]"} gap-2 px-1 text-xs text-muted-foreground sm:grid`}>
         <span />
         {showStarred && <span>Pin</span>}
@@ -369,31 +336,23 @@ export function ExerciseEditor({ category, fieldName, showStarred = true }: { ca
         <span>Note</span>
         <span />
       </div>
-      <DndContext
-        id={dndId}
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={rows.map((r) => r._uid)} strategy={verticalListSortingStrategy}>
-          {rows.map((row, i) => (
-            <SortableExerciseRow
-              key={row._uid}
-              row={row}
-              onChange={(patch) => update(i, patch)}
-              onRemove={() => removeRow(i)}
-              showStarred={showStarred}
-            />
-          ))}
-        </SortableContext>
-      </DndContext>
+      <SortableContext items={rows.map((r) => r._uid)} strategy={verticalListSortingStrategy}>
+        {rows.map((row, i) => (
+          <SortableExerciseRow
+            key={row._uid}
+            row={row}
+            onChange={(patch) => update(i, patch)}
+            onRemove={() => removeRow(i)}
+            showStarred={showStarred}
+          />
+        ))}
+      </SortableContext>
       <div className="flex items-center justify-between pt-1">
         <button type="button" onClick={addRow}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <Plus className="h-4 w-4" />Add exercise
         </button>
-        <SaveStatus status={status} />
+        <SaveStatus status={saveStatus} />
       </div>
     </div>
   );

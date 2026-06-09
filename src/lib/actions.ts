@@ -287,7 +287,11 @@ export async function saveExercises(fieldName: string, categoryName: string, row
     },
     { onConflict: "user_id" }
   );
-  revalidatePath("/settings");
+  // Note: /settings re-fetches on every request (dynamic Server Component reading
+  // cookies/auth), so revalidating it on every save just races webpack's hot
+  // reload during rapid drags and corrupts .next/dev/. /log is the page that
+  // caches this config, so revalidate that instead.
+  revalidatePath("/log");
 }
 
 export async function saveWeeklyLabels(labels: { weekly_A: string; weekly_B: string; weekly_C: string }) {
