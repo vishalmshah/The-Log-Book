@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { Fragment, useState, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -191,27 +191,52 @@ function initSpineEntries(focusEx: string[], ef: Record<string, unknown>): Spine
 
 interface ExerciseCategory { name: string; focus_ex: string[]; notes: string[]; }
 
+type FocusItem =
+  | { kind: "pinned"; exercise: string }
+  | { kind: "cluster"; options: string[] };
+
 interface FocusCategory {
   name: string;
-  starred_ex: string[];
-  optional_ex: string[];
+  items: FocusItem[];
   noteByEx: Record<string, string>;
 }
 
 type FocusRow = ExerciseEntry & { checked: boolean };
 
-function initFocusEntries(starredEx: string[], saved: ExerciseEntry[]): FocusRow[] {
-  const rows: FocusRow[] = starredEx.map((ex) => {
-    const match = saved.find((e) => e.exercise === ex);
-    return {
-      exercise: ex,
-      sessionNotes: match?.sessionNotes ?? "",
-      audioUrl: match?.audioUrl,
-      checked: !!match,
-    };
-  });
+function initFocusEntries(items: FocusItem[], saved: ExerciseEntry[]): FocusRow[] {
+  const rows: FocusRow[] = [];
+  const accountedFor = new Set<string>();
+
+  for (const item of items) {
+    if (item.kind === "pinned") {
+      const match = saved.find((e) => e.exercise === item.exercise);
+      rows.push({
+        exercise: item.exercise,
+        sessionNotes: match?.sessionNotes ?? "",
+        audioUrl: match?.audioUrl,
+        checked: !!match,
+      });
+      accountedFor.add(item.exercise);
+    } else {
+      // Cluster: pre-populate any saved entries belonging to this cluster, in settings order.
+      for (const ex of item.options) {
+        const match = saved.find((e) => e.exercise === ex);
+        if (match) {
+          rows.push({
+            exercise: ex,
+            sessionNotes: match.sessionNotes,
+            audioUrl: match.audioUrl,
+            checked: true,
+          });
+        }
+        accountedFor.add(ex);
+      }
+    }
+  }
+
+  // Stale: anything in saved that wasn't a pinned or cluster option.
   for (const e of saved) {
-    if (!starredEx.includes(e.exercise)) rows.push({ ...e, checked: true });
+    if (!accountedFor.has(e.exercise)) rows.push({ ...e, checked: true });
   }
   return rows;
 }
@@ -379,45 +404,84 @@ function FocusSection({ category, entries, onChange, readOnly, date, saveStatus 
     onChange(entries.filter((_, j) => j !== i));
   }
 
-  const alreadyAdded = new Set(entries.map((e) => e.exercise));
-  const availableToAdd = [...category.optional_ex, JUST_HAVE_FUN].filter((ex) => !alreadyAdded.has(ex));
+  // Index entries by exercise name. Pinned items always have a backing entry (initFocusEntries seeds one);
+  // cluster picks are present if the user has picked them.
+  const byEx = new Map<string, { entry: FocusRow; index: number }>();
+  entries.forEach((entry, index) => {
+    byEx.set(entry.exercise, { entry, index });
+  });
+
+  function renderRow(entry: FocusRow, index: number, removable: boolean) {
+    return (
+      <ExerciseRow key={entry.exercise}
+        exercise={entry.exercise}
+        settingsNote={category.noteByEx[entry.exercise] ?? ""}
+        sessionNotes={entry.sessionNotes}
+        onSessionNotesChange={(v) => update(index, {
+          sessionNotes: v,
+          checked: entry.checked || (entry.sessionNotes === "" && v !== ""),
+        })}
+        checked={entry.checked}
+        onCheckedChange={(v) => update(index, { checked: v })}
+        onRemove={(removable && !readOnly) ? () => removeRow(index) : undefined}
+        readOnly={readOnly}
+        date={date}
+        audioUrl={entry.audioUrl}
+        onAudioSaved={(url) => update(index, { audioUrl: url })}
+        saveStatus={saveStatus}
+      />
+    );
+  }
+
+  const accountedFor = new Set<string>();
 
   return (
     <div className="space-y-3">
-      {entries.map((entry, i) => {
-        const isStarred = category.starred_ex.includes(entry.exercise);
+      {category.items.map((item, itemIdx) => {
+        if (item.kind === "pinned") {
+          accountedFor.add(item.exercise);
+          const found = byEx.get(item.exercise);
+          if (!found) return null; // shouldn't happen — initFocusEntries seeds pinned rows
+          return renderRow(found.entry, found.index, false);
+        }
+        // cluster
+        item.options.forEach((ex) => accountedFor.add(ex));
+        const pickedHere = item.options
+          .map((ex) => byEx.get(ex))
+          .filter((x): x is NonNullable<typeof x> => !!x);
+        const remaining = item.options.filter((ex) => !byEx.has(ex));
         return (
-          <ExerciseRow key={entry.exercise}
-            exercise={entry.exercise}
-            settingsNote={category.noteByEx[entry.exercise] ?? ""}
-            sessionNotes={entry.sessionNotes}
-            onSessionNotesChange={(v) => update(i, {
-              sessionNotes: v,
-              checked: entry.checked || (entry.sessionNotes === "" && v !== ""),
-            })}
-            checked={entry.checked}
-            onCheckedChange={(v) => update(i, { checked: v })}
-            onRemove={(!isStarred && !readOnly) ? () => removeRow(i) : undefined}
-            readOnly={readOnly}
-            date={date}
-            audioUrl={entry.audioUrl}
-            onAudioSaved={(url) => update(i, { audioUrl: url })}
-            saveStatus={saveStatus}
-          />
+          <Fragment key={`cluster-${itemIdx}`}>
+            {pickedHere.map((x) => renderRow(x.entry, x.index, true))}
+            {!readOnly && remaining.length > 0 && (
+              <Select value="" onValueChange={(ex) => {
+                if (!ex) return;
+                onChange([...entries, { exercise: ex, sessionNotes: "", checked: true }]);
+              }}>
+                <SelectTrigger className="h-9 text-sm text-muted-foreground">
+                  <SelectValue placeholder="Add an exercise…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {remaining.map((ex) => <SelectItem key={ex} value={ex}>{ex}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+          </Fragment>
         );
       })}
-      {!readOnly && availableToAdd.length > 0 && (
-        <Select value="" onValueChange={(ex) => {
-          if (!ex) return;
-          onChange([...entries, { exercise: ex, sessionNotes: "", checked: true }]);
-        }}>
-          <SelectTrigger className="h-9 text-sm text-muted-foreground">
-            <SelectValue placeholder="Add an exercise…" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableToAdd.map((ex) => <SelectItem key={ex} value={ex}>{ex}</SelectItem>)}
-          </SelectContent>
-        </Select>
+
+      {/* Stale / extras: any entry whose exercise isn't accounted for above (includes "Have fun!" once added) */}
+      {entries.map((entry, i) =>
+        accountedFor.has(entry.exercise) ? null : renderRow(entry, i, true)
+      )}
+
+      {/* Always-available "Have fun!" add — only when not already in entries */}
+      {!readOnly && !byEx.has(JUST_HAVE_FUN) && (
+        <button type="button"
+          onClick={() => onChange([...entries, { exercise: JUST_HAVE_FUN, sessionNotes: "", checked: true }])}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <Plus className="h-4 w-4" />Add {JUST_HAVE_FUN}
+        </button>
       )}
     </div>
   );
@@ -443,15 +507,15 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
   const focusCategoryMapForInit: Record<string, FocusCategory> = {
     [focus1.name]: focus1, [focus2.name]: focus2, [focus3.name]: focus3,
   };
-  const initPrimaryStarred = focusCategoryMapForInit[initPrimary]?.starred_ex ?? [];
-  const initSecondStarred = initSecond ? (focusCategoryMapForInit[initSecond]?.starred_ex ?? []) : [];
+  const initPrimaryItems = focusCategoryMapForInit[initPrimary]?.items ?? [];
+  const initSecondItems = initSecond ? (focusCategoryMapForInit[initSecond]?.items ?? []) : [];
 
   const [spineEntries, setSpineEntries] = useState<SpineRow[]>(() => initSpineEntries(spine.focus_ex, ef));
   const [primaryEntries, setPrimaryEntries] = useState<FocusRow[]>(() =>
-    initFocusEntries(initPrimaryStarred, (ef?.primary ?? []) as ExerciseEntry[])
+    initFocusEntries(initPrimaryItems, (ef?.primary ?? []) as ExerciseEntry[])
   );
   const [secondaryEntries, setSecondaryEntries] = useState<FocusRow[]>(() =>
-    initFocusEntries(initSecondStarred, (ef?.secondary ?? []) as ExerciseEntry[])
+    initFocusEntries(initSecondItems, (ef?.secondary ?? []) as ExerciseEntry[])
   );
 
   const [moodStars, setMoodStars] = useState<number | null>(existing?.additional_notes?.mood_stars ?? null);
@@ -521,7 +585,7 @@ export function LogForm({ initialDate, weeklyFocus, spine, focus1, focus2, focus
 
   function freshEntriesFor(name: string | null): FocusRow[] {
     if (!name) return [];
-    return initFocusEntries(focusCategoryMap[name]?.starred_ex ?? [], []);
+    return initFocusEntries(focusCategoryMap[name]?.items ?? [], []);
   }
 
   function handlePrimaryChange(val: string) {

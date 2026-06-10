@@ -42,11 +42,34 @@ export default async function LogPage({ searchParams }: Props) {
     return { name: raw.name, focus_ex: raw.focus_ex, notes: raw.focus_ex.map((ex) => noteByEx[ex] ?? "") };
   }
 
-  function withStarred(raw: { name: string; all_ex: string[]; focus_ex: string[]; starred_ex?: string[]; notes: string[] }) {
+  type FocusItem = { kind: "pinned"; exercise: string } | { kind: "cluster"; options: string[] };
+
+  function withItems(raw: {
+    name: string;
+    all_ex: string[];
+    focus_bool: boolean[];
+    starred_bool?: boolean[];
+    notes: string[];
+  }) {
     const noteByEx = Object.fromEntries(raw.all_ex.map((ex, i) => [ex, raw.notes[i] ?? ""]));
-    const starred_ex = raw.starred_ex ?? [];
-    const optional_ex = raw.focus_ex.filter((ex) => !starred_ex.includes(ex));
-    return { name: raw.name, starred_ex, optional_ex, noteByEx };
+    const items: FocusItem[] = [];
+    let cluster: string[] = [];
+    for (let i = 0; i < raw.all_ex.length; i++) {
+      if (!raw.focus_bool[i]) continue;
+      const ex = raw.all_ex[i];
+      const pinned = raw.starred_bool?.[i] ?? false;
+      if (pinned) {
+        if (cluster.length) {
+          items.push({ kind: "cluster", options: cluster });
+          cluster = [];
+        }
+        items.push({ kind: "pinned", exercise: ex });
+      } else {
+        cluster.push(ex);
+      }
+    }
+    if (cluster.length) items.push({ kind: "cluster", options: cluster });
+    return { name: raw.name, items, noteByEx };
   }
 
   const focusInfo = weekLog?.focus_info ?? {};
@@ -64,9 +87,9 @@ export default async function LogPage({ searchParams }: Props) {
         initialDate={dateStr}
         weeklyFocus={weeklyFocus}
         spine={withNotes(config.spine)}
-        focus1={withStarred(config.focus_1)}
-        focus2={withStarred(config.focus_2)}
-        focus3={withStarred(config.focus_3)}
+        focus1={withItems(config.focus_1)}
+        focus2={withItems(config.focus_2)}
+        focus3={withItems(config.focus_3)}
         existing={session}
         showWeeklyPrompt={showWeeklyPrompt}
         dayColors={dayColors}
